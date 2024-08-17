@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "PastoreoCACSC_Frontend",
+    "displayName": "PastoreoCACSC_Frontend",
     "slug": "PastoreoCACSC_Frontend",
     "version": "1.0.0",
     "orientation": "portrait",
