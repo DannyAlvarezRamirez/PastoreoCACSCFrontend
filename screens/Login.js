@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet, Alert, Image, ImageBackground  } from 'react-native';
 
 // Import the background image
-import backgroundImage from '../assets/bg.jpg';
+import backgroundImage from '../assets/bg2.jpg';
+import userIcon from '../assets/usuario(1)-modified.png'
 
 export default function Login({ navigation, setIsAuthenticated  }) {
   const [username, setUsername] = useState('');
@@ -32,11 +33,11 @@ export default function Login({ navigation, setIsAuthenticated  }) {
   };
 
   return (
-    <ImageBackground source={backgroundImage} style={styles.background}>
+    <ImageBackground source={backgroundImage} resizeMode="cover"  style={styles.background}>
           <View style={styles.container}>
             {/* Add the logo */}
             <Image
-              source={{ uri: 'https://img.icons8.com/ios-filled/50/000000/person-male.png' }} // Placeholder person icon
+              source={userIcon} // Placeholder person icon
               style={styles.logo}
             />
             <Text style={styles.title}>Iniciar Sesión</Text>

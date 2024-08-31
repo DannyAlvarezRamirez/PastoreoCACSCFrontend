@@ -1,15 +1,19 @@
 import React from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Button, StyleSheet, TouchableOpacity, Image, ImageBackground } from 'react-native';
+
+// Import the background image
+import backgroundImage from '../assets/bg2.jpg';
 
 export default function Dashboard({ navigation }) {
   return (
+  <ImageBackground source={backgroundImage} resizeMode="cover"  style={styles.background}>
     <View style={styles.container}>
       <Text style={styles.title}>Estado del Pastoreo</Text>
       <Text style={styles.content}>Cantidad de Ganado: 50</Text>
       <Text style={styles.content}>Estado del Pastoreo: Bueno</Text>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('RegistroDatos')}>
+        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Registro')}>
           <Text style={styles.btnText}>Registro de Datos</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Reportes')}>
@@ -23,6 +27,7 @@ export default function Dashboard({ navigation }) {
         </TouchableOpacity>
       </View>
     </View>
+  </ImageBackground>
   );
 }
 
@@ -31,7 +36,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',  // Center the content vertically
     alignItems: 'center',       // Center the content horizontally
-    backgroundColor: '#fff',
+    backgroundColor: '#f9f9f9',
     padding: 20,
   },
   title: {
@@ -77,5 +82,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgb(0, 102, 204)',
     borderColor: 'rgb(204, 0, 105)',
     borderWidth: 2,
+  },
+  background: {
+        flex: 1,
+        justifyContent: 'center',
   },
 });

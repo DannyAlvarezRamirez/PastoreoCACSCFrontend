@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, Button, Text, StyleSheet, Alert, Image, ImageBackground } from 'react-native';
+
+import backgroundImage from '../assets/bg3.jpg';
 
 export default function RecoverPassword({ navigation }) {
   const [email, setEmail] = useState('');
@@ -26,6 +28,7 @@ export default function RecoverPassword({ navigation }) {
   };
 
   return (
+  <ImageBackground source={backgroundImage} resizeMode="cover"  style={styles.background}>
     <View style={styles.container}>
       <Text style={styles.title}>Recuperar Contraseña</Text>
       <TextInput
@@ -36,6 +39,7 @@ export default function RecoverPassword({ navigation }) {
       />
       <Button title="Recuperar Contraseña" onPress={handleRecoverPassword} />
     </View>
+    </ImageBackground>
   );
 }
 
@@ -51,6 +55,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    color: 'white',
   },
   input: {
     width: '80%',
@@ -62,4 +67,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 5,
   },
+  background: {
+        flex: 1,
+        justifyContent: 'center',
+      },
 });

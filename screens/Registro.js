@@ -1,17 +1,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function Administracion({ navigation }) {
+export default function Registro({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Módulo de Administración</Text>
+      <Text style={styles.title}>Registro de Datos</Text>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Usuarios')}>
-          <Text style={styles.btnText}>Gestionar Usuarios</Text>
+        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Ganado')}>
+          <Text style={styles.btnText}>Gestionar Ganado</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('PastoreoRotacion')}>
-          <Text style={styles.btnText}>Gestionar Pastoreo o Rotación de Apartamentos</Text>
+        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Suministros')}>
+          <Text style={styles.btnText}>Gestionar Suministros</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Apartamentos')}>
+          <Text style={styles.btnText}>Gestionar Apartamentos</Text>
         </TouchableOpacity>
       </View>
     </View>
