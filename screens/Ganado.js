@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker'; // For dropdowns
 import DateTimePicker from '@react-native-community/datetimepicker'; // For date pickers
-import { useNavigation } from '@react-navigation/native'; // Import this to access navigation
 
 export default function Ganado() {
-
   const [ganado, setGanado] = useState([]);
   const [currentGanado, setCurrentGanado] = useState(null);
   const [form, setForm] = useState({
-    name: '', // Added name field
+    name: '',
     raza: '',
     peso: '',
     sexo: '',
@@ -24,7 +22,9 @@ export default function Ganado() {
 
   const [showChequeoPicker, setShowChequeoPicker] = useState(false);
   const [showNacimientoPicker, setShowNacimientoPicker] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false); // State for modal visibility
 
+  // Function to save or update Ganado
   const handleSave = () => {
     if (currentGanado === null) {
       setGanado([...ganado, { ...form, id: Date.now().toString() }]);
@@ -35,12 +35,14 @@ export default function Ganado() {
         )
       );
     }
+    setIsModalVisible(false); // Close modal after saving
     clearForm();
   };
 
   const handleEdit = item => {
     setCurrentGanado(item);
     setForm(item);
+    setIsModalVisible(true); // Open modal for editing
   };
 
   const handleDelete = id => {
@@ -80,139 +82,151 @@ export default function Ganado() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Gestionar Ganado</Text>
+      <Text style={styles.title}>Lista de Ganados</Text>
 
-        {/* Name Field */}
-        <Text>Nombre del Ganado</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre"
-          value={form.name}
-          onChangeText={text => setForm({ ...form, name: text })}
-        />
+      {/* Button to open modal for creating new Ganado */}
+      <Button title="Crear Nuevo Ganado" onPress={() => setIsModalVisible(true)} />
 
-        {/* Dropdowns and Date Pickers */}
-        <Text>Raza</Text>
-        <Picker
-          selectedValue={form.raza}
-          onValueChange={value => setForm({ ...form, raza: value })}
-          style={styles.picker}
-        >
-          <Picker.Item label="Seleccione la Raza" value="" />
-          <Picker.Item label="Raza 1" value="raza1" />
-          <Picker.Item label="Raza 2" value="raza2" />
-        </Picker>
+      {/* Modal for creating/updating Ganado */}
+      <Modal
+        visible={isModalVisible}
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>{currentGanado ? 'Editar Ganado' : 'Crear Nuevo Ganado'}</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Peso"
-          value={form.peso}
-          onChangeText={text => setForm({ ...form, peso: text })}
-          keyboardType="numeric"
-        />
-
-        <Text>Sexo</Text>
-        <Picker
-          selectedValue={form.sexo}
-          onValueChange={value => setForm({ ...form, sexo: value })}
-          style={styles.picker}
-        >
-          <Picker.Item label="Seleccione el Sexo" value="" />
-          <Picker.Item label="Macho" value="macho" />
-          <Picker.Item label="Hembra" value="hembra" />
-        </Picker>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Edad"
-          value={form.edad}
-          onChangeText={text => setForm({ ...form, edad: text })}
-          keyboardType="numeric"
-        />
-
-        <Text>Estado de Salud</Text>
-        <Picker
-          selectedValue={form.estadoSalud}
-          onValueChange={value => setForm({ ...form, estadoSalud: value })}
-          style={styles.picker}
-        >
-          <Picker.Item label="Seleccione el Estado de Salud" value="" />
-          <Picker.Item label="Sano" value="sano" />
-          <Picker.Item label="Enfermo" value="enfermo" />
-        </Picker>
-
-        <Text>Fecha de Último Chequeo</Text>
-        <TouchableOpacity onPress={() => setShowChequeoPicker(true)}>
+          {/* Name Field */}
+          <Text>Nombre del Ganado</Text>
           <TextInput
             style={styles.input}
-            placeholder="Seleccione la fecha"
-            value={form.fechaChequeo.toLocaleDateString()}
-            editable={false}
+            placeholder="Nombre"
+            value={form.name}
+            onChangeText={text => setForm({ ...form, name: text })}
           />
-        </TouchableOpacity>
-        {showChequeoPicker && (
-          <DateTimePicker
-            value={form.fechaChequeo}
-            mode="date"
-            display="default"
-            onChange={onChangeChequeo}
-          />
-        )}
 
-        <Text>Productividad</Text>
-        <Picker
-          selectedValue={form.productividad}
-          onValueChange={value => setForm({ ...form, productividad: value })}
-          style={styles.picker}
-        >
-          <Picker.Item label="Seleccione la Productividad" value="" />
-          <Picker.Item label="Alta" value="alta" />
-          <Picker.Item label="Media" value="media" />
-          <Picker.Item label="Baja" value="baja" />
-        </Picker>
+          {/* Dropdowns and Date Pickers */}
+          <Text>Raza</Text>
+          <Picker
+            selectedValue={form.raza}
+            onValueChange={value => setForm({ ...form, raza: value })}
+            style={styles.picker}
+          >
+            <Picker.Item label="Seleccione la Raza" value="" />
+            <Picker.Item label="Raza 1" value="raza1" />
+            <Picker.Item label="Raza 2" value="raza2" />
+          </Picker>
 
-        <Text>Tratamientos</Text>
-        <Picker
-          selectedValue={form.tratamientos}
-          onValueChange={value => setForm({ ...form, tratamientos: value })}
-          style={styles.picker}
-        >
-          <Picker.Item label="Seleccione el Tratamiento" value="" />
-          <Picker.Item label="Vacunas" value="vacunas" />
-          <Picker.Item label="Medicamentos" value="medicamentos" />
-        </Picker>
-
-        <Text>Fecha de Nacimiento</Text>
-        <TouchableOpacity onPress={() => setShowNacimientoPicker(true)}>
           <TextInput
             style={styles.input}
-            placeholder="Seleccione la fecha"
-            value={form.fechaNacimiento.toLocaleDateString()}
+            placeholder="Peso"
+            value={form.peso}
+            onChangeText={text => setForm({ ...form, peso: text })}
+            keyboardType="numeric"
+          />
+
+          <Text>Sexo</Text>
+          <Picker
+            selectedValue={form.sexo}
+            onValueChange={value => setForm({ ...form, sexo: value })}
+            style={styles.picker}
+          >
+            <Picker.Item label="Seleccione el Sexo" value="" />
+            <Picker.Item label="Macho" value="macho" />
+            <Picker.Item label="Hembra" value="hembra" />
+          </Picker>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Edad"
+            value={form.edad}
+            onChangeText={text => setForm({ ...form, edad: text })}
+            keyboardType="numeric"
+          />
+
+          <Text>Estado de Salud</Text>
+          <Picker
+            selectedValue={form.estadoSalud}
+            onValueChange={value => setForm({ ...form, estadoSalud: value })}
+            style={styles.picker}
+          >
+            <Picker.Item label="Seleccione el Estado de Salud" value="" />
+            <Picker.Item label="Sano" value="sano" />
+            <Picker.Item label="Enfermo" value="enfermo" />
+          </Picker>
+
+          <Text>Fecha de Último Chequeo</Text>
+          <TouchableOpacity onPress={() => setShowChequeoPicker(true)}>
+            <TextInput
+              style={styles.input}
+              placeholder="Seleccione la fecha"
+              value={form.fechaChequeo.toLocaleDateString()}
+              editable={false}
+            />
+          </TouchableOpacity>
+          {showChequeoPicker && (
+            <DateTimePicker
+              value={form.fechaChequeo}
+              mode="date"
+              display="default"
+              onChange={onChangeChequeo}
+            />
+          )}
+
+          <Text>Productividad</Text>
+          <Picker
+            selectedValue={form.productividad}
+            onValueChange={value => setForm({ ...form, productividad: value })}
+            style={styles.picker}
+          >
+            <Picker.Item label="Seleccione la Productividad" value="" />
+            <Picker.Item label="Alta" value="alta" />
+            <Picker.Item label="Media" value="media" />
+            <Picker.Item label="Baja" value="baja" />
+          </Picker>
+
+          <Text>Tratamientos</Text>
+          <Picker
+            selectedValue={form.tratamientos}
+            onValueChange={value => setForm({ ...form, tratamientos: value })}
+            style={styles.picker}
+          >
+            <Picker.Item label="Seleccione el Tratamiento" value="" />
+            <Picker.Item label="Vacunas" value="vacunas" />
+            <Picker.Item label="Medicamentos" value="medicamentos" />
+          </Picker>
+
+          <Text>Fecha de Nacimiento</Text>
+          <TouchableOpacity onPress={() => setShowNacimientoPicker(true)}>
+            <TextInput
+              style={styles.input}
+              placeholder="Seleccione la fecha"
+              value={form.fechaNacimiento.toLocaleDateString()}
+              editable={false}
+            />
+          </TouchableOpacity>
+          {showNacimientoPicker && (
+            <DateTimePicker
+              value={form.fechaNacimiento}
+              mode="date"
+              display="default"
+              onChange={onChangeNacimiento}
+            />
+          )}
+
+          <TextInput
+            style={styles.input}
+            placeholder="Identificación Única"
+            value={form.identificacion}
             editable={false}
           />
-        </TouchableOpacity>
-        {showNacimientoPicker && (
-          <DateTimePicker
-            value={form.fechaNacimiento}
-            mode="date"
-            display="default"
-            onChange={onChangeNacimiento}
-          />
-        )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Identificación Única"
-          value={form.identificacion}
-          editable={false}
-        />
+          <Button title={currentGanado ? 'Actualizar' : 'Guardar'} onPress={handleSave} />
+          <Button title="Cerrar" onPress={() => setIsModalVisible(false)} color="gray" />
+        </ScrollView>
+      </Modal>
 
-        <Button title={currentGanado ? 'Actualizar' : 'Guardar'} onPress={handleSave} />
-        <Button title="Limpiar Formulario" onPress={clearForm} color="gray" />
-      </ScrollView>
-
-      {/* List of Ganado Items */}
+      {/* Table of Ganado */}
       <FlatList
         data={ganado}
         keyExtractor={(item, index) => `key-${index}`}
@@ -229,11 +243,7 @@ export default function Ganado() {
             </View>
           </View>
         )}
-        ListFooterComponent={() => (
-          <View>
-            <Text></Text>
-          </View>
-        )}
+        ListFooterComponent={() => <View><Text></Text></View>}
       />
     </SafeAreaView>
   );
@@ -242,7 +252,7 @@ export default function Ganado() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingBottom: 75, // Added padding to the bottom
+    paddingBottom: 75,
     backgroundColor: '#f9f9f9',
   },
   title: {
