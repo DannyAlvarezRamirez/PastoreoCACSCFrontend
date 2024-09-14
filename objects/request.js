@@ -3,9 +3,9 @@ import axios from 'axios';
 // Base headers for every request
 const baseHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
-  'Access-Control-Allow-Origin': 'https://pastoreo.com',
+  'Access-Control-Allow-Origin': 'http://localhost:8081',
   'Access-Control-Allow-Credentials': true,
-  'Authorization': 'Bearer your_jwt_token', // If using JWT authentication, replace 'your_jwt_token' with dynamic token fetching.
+  'Authorization': 'Bearer YourNew32CharacterSecretKeyHere123456', // If using JWT authentication, replace 'your_jwt_token' with dynamic token fetching.
 };
 
 const request = {

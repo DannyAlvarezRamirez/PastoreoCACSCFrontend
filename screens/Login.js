@@ -1,39 +1,63 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet, Alert, Image, ImageBackground  } from 'react-native';
-
+import { Dialog, Portal, Provider } from 'react-native-paper';  // Import Paper Dialog components
 // Import the background image
 import backgroundImage from '../assets/bg2.jpg';
 import userIcon from '../assets/usuario(1)-modified.png'
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token
+
+// Import the request service
+import request from '../objects/request';  // Adjust the path as per your project structure
 
 export default function Login({ navigation, setIsAuthenticated  }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [visible, setVisible] = useState(false);
+  const [dialogMessage, setDialogMessage] = useState('');
 
-    // Hardcoded test credentials
-    const testUsername = 'admin';
-    const testPassword = 'password123';
-    const hardcodedUsername = 'newuser';
-    const hardcodedPassword = '12';
+  const showDialog = (message) => {
+    setDialogMessage(message);
+    setVisible(true);
+  };
 
-  const handleLogin = () => {
-    // Add login logic here (authentication)
-    //console.log('Logging in with', username, password);
-    //navigation.navigate('Dashboard'); // Navigate to Dashboard on successful login
+  const hideDialog = () => {
+    setVisible(false);
+  };
 
-    // Check if username and password match the hardcoded values
-        if (username === testUsername && password === testPassword ||
-        username === hardcodedUsername && password === hardcodedPassword) {
-          setIsAuthenticated(true);  // Set authentication to true, which will navigate to the dashboard
-          navigation.navigate('Dashboard');  // Navigate to the Dashboard
-        }
-        else {
-          // Show an alert if the login fails
-          Alert.alert('Error', 'Usuario o contraseña incorrectos.');
+  const handleLogin = async () => {
+    //Keyboard.dismiss();  // Hide keyboard when the button is pressed
+
+    try {
+          // Set up the API request configuration
+          request.setConfig({
+            method: 'post', // Use POST method
+            withCredentials: true,
+            url: 'http://localhost:5075/api/Auth/login',  // Replace with your API login endpoint
+            data: { username, password }  // Send the username and password in the request body
+          });
+
+          // Send the login request
+          const response = await request.sendRequest();
+
+          if (response.exitCode === 0) {
+            // Store the token in AsyncStorage for future API calls
+            await AsyncStorage.setItem('token', response.Token);
+            setIsAuthenticated(true);  // Set authentication to true
+            navigation.navigate('Dashboard');  // Navigate to Dashboard on successful login
+          } else {
+            // If login fails, show an alert
+            showDialog('Usuario o contraseña incorrectos, o el usuario esta inactivo.');
+          }
+        } catch (error) {
+          // Show an alert if there is an error in the API call
+          showDialog('Ha ocurrido un problema en el inicio de sesión. Inténtelo de nuevo.');
+          console.error('Login error:', error);
         }
   };
 
   return (
-    <ImageBackground source={backgroundImage} resizeMode="cover"  style={styles.background}>
+    <Provider>
+      <ImageBackground source={backgroundImage} resizeMode="cover"  style={styles.background}>
           <View style={styles.container}>
             {/* Add the logo */}
             <Image
@@ -62,7 +86,21 @@ export default function Login({ navigation, setIsAuthenticated  }) {
               Recuperar Contraseña
             </Text>
           </View>
-        </ImageBackground>
+
+          {/* Dialog to show messages */}
+                  <Portal>
+                    <Dialog visible={visible} onDismiss={hideDialog}>
+                      <Dialog.Title>Atención</Dialog.Title>
+                      <Dialog.Content>
+                        <Text>{dialogMessage}</Text>
+                      </Dialog.Content>
+                      <Dialog.Actions>
+                        <Button onPress={hideDialog} title="OK" />
+                      </Dialog.Actions>
+                    </Dialog>
+                  </Portal>
+      </ImageBackground>
+    </Provider>
   );
 }
 
