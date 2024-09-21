@@ -7,7 +7,7 @@ export default function Ganado() {
   const [ganado, setGanado] = useState([]);
   const [currentGanado, setCurrentGanado] = useState(null);
   const [form, setForm] = useState({
-    name: '',
+    name: '', 
     raza: '',
     peso: '',
     sexo: '',
