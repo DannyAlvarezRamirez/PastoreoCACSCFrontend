@@ -24,7 +24,7 @@ export default function Reportes() {
             request.setConfig({
                 method: 'post',
                 withCredentials: true,
-                url: 'http://localhost:5075/api/Reporte/generate', // Replace with your API endpoint for generating reports
+                url: 'http://localhost:5075/api/Reporte/generate', // Replace with your API endpoint for generating reports 
                 data: {
                     registerType: selectedParameter, // The type of data being selected
                     reportType: selectedReportType,  // The type of report being generated
