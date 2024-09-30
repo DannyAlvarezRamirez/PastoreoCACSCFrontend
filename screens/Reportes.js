@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
-import { SafeAreaView, View, Text, Button, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
-import { VictoryPie, VictoryBar, VictoryLine } from 'victory-native'; // Ensure proper import
+import { SafeAreaView, View, Text, Button, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Dialog, Portal, Provider } from 'react-native-paper'; // Add if missing
 import DateTimePicker from '@react-native-community/datetimepicker'; // For date pickers
 import request from '../objects/request'; // Ensure the request object is imported correctly
+
+// Conditionally import the charting library based on the platform
+const { VictoryPie, VictoryBar, VictoryLine } = Platform.OS === 'web' ? require('victory') : require('victory-native');
+
+import * as XLSX from 'xlsx';  // Import xlsx for Excel file creation
+import { saveAs } from 'file-saver';  // For saving files in Web
+import jsPDF from 'jspdf';  // For generating PDFs on web
+
+// Conditionally import only for mobile platforms
+let RNFS;
+let Share;
+let PdfLib;
+let HtmlToPdf;
+if (Platform.OS !== 'web') {
+    RNFS = require('react-native-fs');
+    Share = require('react-native-share');
+    PdfLib = require('react-native-pdf-lib'); // For generating PDFs on Android/iOS
+    HtmlToPdf = require('react-native-html-to-pdf'); // Alternative for creating PDFs from HTML
+}
 
 export default function Reportes() {
     const [selectedParameter, setSelectedParameter] = useState('');
@@ -17,8 +35,159 @@ export default function Reportes() {
     const [isDialogVisible, setIsDialogVisible] = useState(false);
     const [dialogMessage, setDialogMessage] = useState('');
 
+    // Helper function to format dates to 'YYYY-MM-DD'
+    const formatDateForInput = (date) => {
+        if (date instanceof Date && !isNaN(date)) {
+            return date.toISOString().substring(0, 10);
+        }
+        return ''; // Return an empty string if the date is invalid
+    };
+
+    const transformDataForVictory = (apiData, registerType) => {
+        //if (apiData && apiData.length > 0 && apiData[0].length > 0) {
+        //    return apiData[0].map((item, index) => ({
+        //        x: `Ganado ${item.ganadoId}`, // Or use any other field for the x-axis label
+        //        y: item.peso,                 // For example, we use 'peso' (weight) for the y-axis
+        //    }));
+        //}
+        //return [];
+        if (apiData && apiData.length > 0 && apiData[0].length > 0) {
+            // Transform data based on the registerType
+            if (registerType === 'ganado') {
+                return apiData[0].map((item, index) => ({
+                    x: `Ganado ${item.ganadoId}`, // Use the ganadoId as the x-axis label
+                    y: item.peso,                 // Use 'peso' (weight) for the y-axis value
+                }));
+            } else if (registerType === 'suministros') {
+                return apiData[0].map((item, index) => ({
+                    x: `Suministro ${item.suministroId}`, // Use suministroId as the x-axis label
+                    y: item.cantidad,                    // Use 'cantidad' for the y-axis value
+                }));
+            } else if (registerType === 'apartamentos') {
+                return apiData[0].map((item, index) => ({
+                    x: `Apartamento ${item.apartamentoId}`,  // Use apartamentoId as the x-axis label
+                    y: item.tamanoArea || 0,                // Use 'tamanoArea' (size) for the y-axis, default to 0 if null
+                }));
+            }
+        }
+        return [];  // Return an empty array if no data is found
+    };
+
+    // Function to export data to Excel
+    const handleExportToExcel = () => {
+        // Create a new Excel workbook
+        const wb = XLSX.utils.book_new();
+
+        // Convert reportData to a worksheet (if reportData is an array of objects)
+        const ws = XLSX.utils.json_to_sheet(reportData);
+
+        // Append the worksheet to the workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Report');
+
+        const fileName = `Report_${Date.now()}.xlsx`;
+
+        if (Platform.OS === 'web') {
+            // For Web
+            const wbout = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            saveAs(blob, fileName);
+            setDialogMessage('The report has been exported as ' + fileName);
+        } else {
+            // For Android/iOS
+            const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+            const filePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
+
+            RNFS.writeFile(filePath, wbout, 'base64')
+                .then(() => {
+                    // Share the file after it is written
+                    Share.open({
+                        url: `file://${filePath}`,
+                        title: 'Export Report',
+                        message: 'Here is your report',
+                    })
+                        .then(() => {
+                            setDialogMessage('The report has been exported as ' + fileName);
+                        })
+                        .catch((err) => {
+                            setDialogMessage('Sharing Error:', err);
+                            console.error('Sharing Error:', err);
+                        });
+                })
+                .catch((err) => {
+                    setDialogMessage('File Write Error: ', err);
+                    console.error('File Write Error:', err);
+                });
+        }
+    };
+
+    // Function to export data to PDF
+    const handleExportToPdf = async () => {
+        const fileName = `Report_${Date.now()}.pdf`;
+
+        if (Platform.OS === 'web') {
+            // Web: Generate PDF using jsPDF
+            const doc = new jsPDF();
+            doc.text('Report Data', 10, 10);
+            reportData.forEach((item, index) => {
+                doc.text(`${item.x}: ${item.y}`, 10, 20 + index * 10); // Add report data to PDF
+            });
+            doc.save(fileName);
+            setDialogMessage('The report has been exported as ' + fileName);
+        }
+        else {
+            // Android/iOS: Generate PDF using react-native-pdf-lib or react-native-html-to-pdf
+            try {
+                const htmlContent = `
+          <h1>Report Data</h1>
+          <ul>
+            ${reportData.map(item => `<li>${item.x}: ${item.y}</li>`).join('')}
+          </ul>
+        `;
+
+                const pdfFile = await HtmlToPdf.convert({
+                    html: htmlContent,
+                    fileName: fileName.replace('.pdf', ''),
+                    directory: 'Documents',
+                });
+
+                Share.open({
+                    url: `file://${pdfFile.filePath}`,
+                    title: 'Export Report',
+                    message: 'This is your report',
+                });
+                setDialogMessage('The report has been exported as ' + fileName);
+            }
+            catch (error) {
+                console.error('Error exporting PDF:', error);
+                setDialogMessage('Failed to export report to PDF.');
+            }
+        }
+    };
+    
     // Function to handle generating the report
     const handleGenerateReport = async () => {
+        // Validate the required filters
+        if (!selectedParameter) {
+            setDialogMessage('Debe seleccionar un parámetro.');
+            return;
+        }
+
+        if (!selectedReportType) {
+            setDialogMessage('Debe seleccionar un tipo de reporte.');
+            return;
+        }
+
+        if (!startDate || !endDate) {
+            setDialogMessage('Debe seleccionar una fecha de inicio y una fecha de fin.');
+            return;
+        }
+
+        // Check if the start date is before the end date
+        if (new Date(startDate) > new Date(endDate)) {
+            setDialogMessage('La fecha de inicio no puede ser posterior a la fecha de fin.');
+            return;
+        }
+
         try {
             // Set up the API request to fetch report data
             request.setConfig({
@@ -28,8 +197,8 @@ export default function Reportes() {
                 data: {
                     registerType: selectedParameter, // The type of data being selected
                     reportType: selectedReportType,  // The type of report being generated
-                    startDate, // Send startDate
-                    endDate,   // Send endDate
+                    startDate: startDate.toISOString(), // Send startDate
+                    endDate: endDate.toISOString(),   // Send endDate
                 },
             });
 
@@ -43,32 +212,48 @@ export default function Reportes() {
                 if (Array.isArray(reportContent) && reportContent.length === 0) {
                     setDialogMessage('El reporte no contiene datos.');
                     setReportData(null); // No valid data
-                } else {
-                    setReportData(reportContent); // Set valid report data
-                    setDialogMessage('Reporte generado exitosamente.');
                 }
-            } else {
+                else {
+                    // After getting the response
+                    const transformedData = transformDataForVictory(response.data, selectedParameter);
+
+                    if (transformedData.length > 0) {
+                        // Set valid report data
+                        setReportData(transformedData); // Use this data for the charts
+                        setDialogMessage('Reporte generado exitosamente.');
+                    }
+                    else {
+                        setDialogMessage("No data available for the selected report.");
+                        setIsDialogVisible(true);
+                    }
+                }
+            }
+            else {
                 setDialogMessage('No se encontraron resultados o hubo un problema.');
             }
-        } catch (error) {
+        }
+        catch (error) {
             setDialogMessage('Ha ocurrido un problema. Inténtelo de nuevo más tarde.');
             console.error('Error:', error);
         }
         setIsDialogVisible(true); // Show dialog with the result
     };
 
-    const handleExport = (format) => {
-        // Simulate exporting report
-        alert(`Exported report as ${format}`);
-    };
-
     // Function to show the start date picker
     const handleShowStartDatePicker = () => {
+        if (Platform.OS === 'web') {
+            // Web platform, no need to show picker as it's handled in input directly
+            return;
+        }
         setShowStartDatePicker(true);
     };
 
     // Function to show the end date picker
     const handleShowEndDatePicker = () => {
+        if (Platform.OS === 'web') {
+            // Web platform, no need to show picker as it's handled in input directly
+            return;
+        }
         setShowEndDatePicker(true);
     };
 
@@ -122,16 +307,25 @@ export default function Reportes() {
                     {/* Date Range Selection */}
                     <Text>Seleccionar Rango de Fechas</Text>
 
-                    <TouchableOpacity onPress={handleShowStartDatePicker}>
+                    {/* Start Date Picker for web or mobile */}
+                    {Platform.OS === 'web' ? (
                         <TextInput
+                            type="date"
                             style={styles.input}
-                            placeholder="Fecha de Inicio"
-                            value={startDate.toLocaleDateString()}
-                            editable={false}
+                            value={formatDateForInput(startDate)} // Ensure the value is valid for HTML date input
+                            onChange={(e) => setStartDate(new Date(e.target.value))}
                         />
-                    </TouchableOpacity>
-
-                    {showStartDatePicker && (
+                    ) : (
+                        <TouchableOpacity onPress={handleShowStartDatePicker}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Fecha de Inicio"
+                                value={startDate.toLocaleDateString()}
+                                editable={false}
+                            />
+                        </TouchableOpacity>
+                    )}
+                    {showStartDatePicker && Platform.OS !== 'web' && (
                         <DateTimePicker
                             value={startDate}
                             mode="date"
@@ -140,16 +334,25 @@ export default function Reportes() {
                         />
                     )}
 
-                    <TouchableOpacity onPress={handleShowEndDatePicker}>
+                    {/* End Date Picker for web or mobile */}
+                    {Platform.OS === 'web' ? (
                         <TextInput
+                            type="date"
                             style={styles.input}
-                            placeholder="Fecha de Fin"
-                            value={endDate.toLocaleDateString()}
-                            editable={false}
+                            value={formatDateForInput(endDate)} // Ensure the value is valid for HTML date input
+                            onChange={(e) => setEndDate(new Date(e.target.value))}
                         />
-                    </TouchableOpacity>
-
-                    {showEndDatePicker && (
+                    ) : (
+                        <TouchableOpacity onPress={handleShowEndDatePicker}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Fecha de Fin"
+                                value={endDate.toLocaleDateString()}
+                                editable={false}
+                            />
+                        </TouchableOpacity>
+                    )}
+                    {showEndDatePicker && Platform.OS !== 'web' && (
                         <DateTimePicker
                             value={endDate}
                             mode="date"
@@ -162,25 +365,39 @@ export default function Reportes() {
                     <Button title="Generar Reporte" onPress={handleGenerateReport} />
 
                     {/* Display Report */}
-                    {reportData && (
+                    {reportData && reportData.length > 0 && (
                         <View style={styles.chartContainer}>
                             <Text style={styles.chartTitle}>Visualización del Reporte</Text>
                             {selectedReportType === 'semanal' && (
-                                <VictoryBar data={reportData} />
+                                <VictoryBar data={reportData}
+                                    width={350}         // Adjust the width
+                                    height={250}        // Adjust the height
+                                    padding={{ top: 20, bottom: 60, left: 60, right: 20 }}  // Add some padding for labels
+                                />
                             )}
                             {selectedReportType === 'mensual' && (
-                                <VictoryLine data={reportData} />
+                                <VictoryLine data={reportData}
+                                    data={reportData}
+                                    width={350}         // Adjust the width
+                                    height={250}        // Adjust the height
+                                    padding={{ top: 20, bottom: 60, left: 60, right: 20 }}  // Add some padding for labels
+                                />
                             )}
                             {selectedReportType === 'anual' && (
-                                <VictoryPie data={reportData} />
+                                <VictoryPie data={reportData}
+                                    width={300}         // Adjust the width for pie chart
+                                    height={300}        // Adjust the height
+                                    innerRadius={50}    // Optionally add inner radius for donut chart effect
+                                    padding={{ top: 20, bottom: 60, left: 60, right: 20 }}  // Add some padding for labels/>
+                                />
                             )}
                         </View>
                     )}
 
                     {/* Export Buttons */}
                     <View style={styles.exportButtons}>
-                        <Button title="Exportar PDF" onPress={() => handleExport('PDF')} />
-                        <Button title="Exportar Excel" onPress={() => handleExport('Excel')} />
+                        <Button title="Exportar PDF" onPress={handleExportToPdf} />
+                        <Button title="Exportar Excel" onPress={handleExportToExcel} />
                     </View>
                 </ScrollView>
 
