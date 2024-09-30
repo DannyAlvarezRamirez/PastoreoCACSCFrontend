@@ -66,7 +66,7 @@ export default function Reportes() {
             } else if (registerType === 'apartamentos') {
                 return apiData[0].map((item, index) => ({
                     x: `Apartamento ${item.apartamentoId}`,  // Use apartamentoId as the x-axis label
-                    y: item.tamanoArea || 0,                // Use 'tamanoArea' (size) for the y-axis, default to 0 if null
+                    y: item.tamanoArea || 0,                // Use 'tamanoArea' (size) for the y-axis, default to 0 if null 
                 }));
             }
         }
