@@ -1,8 +1,10 @@
 {
   "ExpandedNodes": [
     "",
+    "\\components",
+    "\\objects",
     "\\screens"
   ],
-  "SelectedNode": "\\screens\\Registro.js",
+  "SelectedNode": "\\index.js",
   "PreviewInSolutionExplorer": false
 }

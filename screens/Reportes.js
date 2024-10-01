@@ -307,58 +307,63 @@ export default function Reportes() {
                     {/* Date Range Selection */}
                     <Text>Seleccionar Rango de Fechas</Text>
 
-                    {/* Start Date Picker for web or mobile */}
                     {Platform.OS === 'web' ? (
-                        <TextInput
-                            type="date"
-                            style={styles.input}
-                            value={formatDateForInput(startDate)} // Ensure the value is valid for HTML date input
-                            onChange={(e) => setStartDate(new Date(e.target.value))}
-                        />
-                    ) : (
-                        <TouchableOpacity onPress={handleShowStartDatePicker}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Fecha de Inicio"
-                                value={startDate.toLocaleDateString()}
-                                editable={false}
+                        <>
+                            <label htmlFor="start">Fecha de Inicio</label>
+                            <input
+                                type="date"
+                                id="start"
+                                name="trip-start"
+                                value={formatDateForInput(startDate)}
+                                onChange={(e) => setStartDate(new Date(e.target.value))}
+                                style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
                             />
-                        </TouchableOpacity>
-                    )}
-                    {showStartDatePicker && Platform.OS !== 'web' && (
-                        <DateTimePicker
-                            value={startDate}
-                            mode="date"
-                            display="default"
-                            onChange={handleStartDateChange}
-                        />
-                    )}
+                            <label htmlFor="end">Fecha de Fin</label>
+                            <input
+                                type="date"
+                                id="end"
+                                name="trip-end"
+                                value={formatDateForInput(endDate)}
+                                onChange={(e) => setEndDate(new Date(e.target.value))}
+                                style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <TouchableOpacity onPress={handleShowStartDatePicker}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Fecha de Inicio"
+                                    value={startDate.toLocaleDateString()}
+                                    editable={false}
+                                />
+                            </TouchableOpacity>
+                            {showStartDatePicker && (
+                                <DateTimePicker
+                                    value={startDate}
+                                    mode="date"
+                                    display="default"
+                                    onChange={handleStartDateChange}
+                                />
+                            )}
 
-                    {/* End Date Picker for web or mobile */}
-                    {Platform.OS === 'web' ? (
-                        <TextInput
-                            type="date"
-                            style={styles.input}
-                            value={formatDateForInput(endDate)} // Ensure the value is valid for HTML date input
-                            onChange={(e) => setEndDate(new Date(e.target.value))}
-                        />
-                    ) : (
-                        <TouchableOpacity onPress={handleShowEndDatePicker}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Fecha de Fin"
-                                value={endDate.toLocaleDateString()}
-                                editable={false}
-                            />
-                        </TouchableOpacity>
-                    )}
-                    {showEndDatePicker && Platform.OS !== 'web' && (
-                        <DateTimePicker
-                            value={endDate}
-                            mode="date"
-                            display="default"
-                            onChange={handleEndDateChange}
-                        />
+                            <TouchableOpacity onPress={handleShowEndDatePicker}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Fecha de Fin"
+                                    value={endDate.toLocaleDateString()}
+                                    editable={false}
+                                />
+                            </TouchableOpacity>
+                            {showEndDatePicker && (
+                                <DateTimePicker
+                                    value={endDate}
+                                    mode="date"
+                                    display="default"
+                                    onChange={handleEndDateChange}
+                                />
+                            )}
+                        </>
                     )}
 
                     {/* Generate Report Button */}

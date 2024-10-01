@@ -17,6 +17,14 @@ import DateTimePicker from "@react-native-community/datetimepicker"; // For date
 import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
 import request from "../objects/request";
 
+// Helper function to format dates to 'YYYY-MM-DD' for web input fields
+const formatDateForInput = (date) => {
+    if (date instanceof Date && !isNaN(date)) {
+        return date.toISOString().substring(0, 10);
+    }
+    return ''; // Return an empty string if the date is invalid
+};
+
 export default function Ganado() {
   const [ganado, setGanado] = useState([]);
   const [currentGanado, setCurrentGanado] = useState(null);
@@ -145,19 +153,26 @@ export default function Ganado() {
     setIsDialogVisible(true); // Show dialog with the result
   };
 
-  const onChangeChequeo = (event, selectedDate) => {
-    setShowChequeoPicker(false);
-    if (selectedDate) {
-      setForm({ ...form, fechaChequeo: selectedDate });
-    }
-  };
+    // Helper functions to show date pickers for web and mobile
+    const handleShowChequeoPicker = () => {
+        if (Platform.OS === 'web') return;
+        setShowChequeoPicker(true);
+    };
 
-  const onChangeNacimiento = (event, selectedDate) => {
-    setShowNacimientoPicker(false);
-    if (selectedDate) {
-      setForm({ ...form, fechaNacimiento: selectedDate });
-    }
-  };
+    const handleShowNacimientoPicker = () => {
+        if (Platform.OS === 'web') return;
+        setShowNacimientoPicker(true);
+    };
+
+    const handleFechaChequeoChange = (event, selectedDate) => {
+        setShowChequeoPicker(false);
+        if (selectedDate) setForm({ ...form, fechaChequeo: selectedDate });
+    };
+
+    const handleFechaNacimientoChange = (event, selectedDate) => {
+        setShowNacimientoPicker(false);
+        if (selectedDate) setForm({ ...form, fechaNacimiento: selectedDate });
+    };
 
   // Function to handle the search based on filters
   const handleSearch = async () => {
@@ -288,30 +303,6 @@ export default function Ganado() {
             ))}
           </Picker>
 
-          <Text>Fecha de Último Chequeo</Text>
-          <TouchableOpacity onPress={() => setShowChequeoPicker(true)}>
-            <TextInput
-              style={styles.input}
-              placeholder="Seleccione la fecha"
-              value={filters.fechaChequeo.toLocaleDateString()}
-              editable={false}
-            />
-          </TouchableOpacity>
-          {showChequeoPicker && (
-            <DateTimePicker
-              value={filters.fechaChequeo}
-              mode="date"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowChequeoPicker(false);
-                setFilters({
-                  ...filters,
-                  fechaChequeo: selectedDate || filters.fechaChequeo,
-                });
-              }}
-            />
-          )}
-
           <Text>Productividad</Text>
           <Picker
             selectedValue={filters.productividad}
@@ -340,27 +331,67 @@ export default function Ganado() {
             ))}
           </Picker>
 
-          <Text>Fecha de Nacimiento</Text>
-          <TouchableOpacity onPress={() => setShowNacimientoPicker(true)}>
-            <TextInput
-              style={styles.input}
-              placeholder="Seleccione la fecha"
-              value={filters.fechaNacimiento.toLocaleDateString()}
-              editable={false}
-            />
-          </TouchableOpacity>
-          {showNacimientoPicker && (
+          {/* Fecha de Último Chequeo */}
+          {Platform.OS === 'web' ? (
+            <>
+              <label htmlFor="fechaChequeo">Fecha de Último Chequeo</label>
+              <input
+                type="date"
+                id="fechaChequeo"
+                name="fechaChequeo"
+                value={formatDateForInput(filters.fechaChequeo)}
+                onChange={(e) => setFilters({ ...filters, fechaChequeo: new Date(e.target.value) })}
+                style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
+              />
+            </>
+          ) : (
+            <TouchableOpacity onPress={handleShowChequeoPicker}>
+              <TextInput
+                style={styles.input}
+                placeholder="Seleccione la fecha"
+                value={form.fechaChequeo.toLocaleDateString()}
+                editable={false}
+              />
+            </TouchableOpacity>
+          )}
+          {showChequeoPicker && Platform.OS !== 'web' && (
             <DateTimePicker
-              value={filters.fechaNacimiento}
+              value={form.fechaChequeo}
               mode="date"
               display="default"
-              onChange={(event, selectedDate) => {
-                setShowNacimientoPicker(false);
-                setFilters({
-                  ...filters,
-                  fechaNacimiento: selectedDate || filters.fechaNacimiento,
-                });
-              }}
+              onChange={handleFechaChequeoChange}
+            />
+          )}
+
+          {/* Fecha de Nacimiento */}
+          {Platform.OS === 'web' ? (
+            <>
+              <label htmlFor="fechaNacimiento">Fecha de Nacimiento</label>
+              <input
+                type="date"
+                id="fechaNacimiento"
+                name="fechaNacimiento"
+                value={formatDateForInput(filters.fechaNacimiento)}
+                onChange={(e) => setFilters({ ...filters, fechaNacimiento: new Date(e.target.value) })}
+                style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
+              />
+            </>
+          ) : (
+            <TouchableOpacity onPress={handleShowNacimientoPicker}>
+              <TextInput
+                style={styles.input}
+                placeholder="Seleccione la fecha"
+                value={form.fechaNacimiento.toLocaleDateString()}
+                editable={false}
+              />
+            </TouchableOpacity>
+          )}
+          {showNacimientoPicker && Platform.OS !== 'web' && (
+            <DateTimePicker
+              value={form.fechaNacimiento}
+              mode="date"
+              display="default"
+              onChange={handleFechaNacimientoChange}
             />
           )}
 
@@ -442,30 +473,6 @@ export default function Ganado() {
               ))}
             </Picker>
 
-            <Text>Fecha de Último Chequeo</Text>
-            <TouchableOpacity onPress={() => setShowChequeoPicker(true)}>
-              <TextInput
-                style={styles.input}
-                placeholder="Seleccione la fecha"
-                value={form.fechaChequeo.toLocaleDateString()}
-                editable={false}
-              />
-            </TouchableOpacity>
-            {showChequeoPicker && (
-              <DateTimePicker
-                value={form.fechaChequeo}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowChequeoPicker(false);
-                  setForm({
-                    ...form,
-                    fechaChequeo: selectedDate || form.fechaChequeo,
-                  });
-                }}
-              />
-            )}
-
             <Text>Productividad</Text>
             <Picker
               selectedValue={form.productividad}
@@ -494,8 +501,53 @@ export default function Ganado() {
               ))}
             </Picker>
 
-            <Text>Fecha de Nacimiento</Text>
-            <TouchableOpacity onPress={() => setShowNacimientoPicker(true)}>
+            {/* Fecha de Último Chequeo */}
+          {Platform.OS === 'web' ? (
+            <>
+              <label htmlFor="fechaChequeo">Fecha de Último Chequeo</label>
+              <input
+                type="date"
+                id="fechaChequeo"
+                name="fechaChequeo"
+                value={formatDateForInput(filters.fechaChequeo)}
+                onChange={(e) => setFilters({ ...filters, fechaChequeo: new Date(e.target.value) })}
+                style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
+              />
+            </>
+          ) : (
+            <TouchableOpacity onPress={handleShowChequeoPicker}>
+              <TextInput
+                style={styles.input}
+                placeholder="Seleccione la fecha"
+                value={form.fechaChequeo.toLocaleDateString()}
+                editable={false}
+              />
+            </TouchableOpacity>
+          )}
+          {showChequeoPicker && Platform.OS !== 'web' && (
+            <DateTimePicker
+              value={form.fechaChequeo}
+              mode="date"
+              display="default"
+              onChange={handleFechaChequeoChange}
+            />
+          )}
+
+          {/* Fecha de Nacimiento */}
+          {Platform.OS === 'web' ? (
+            <>
+              <label htmlFor="fechaNacimiento">Fecha de Nacimiento</label>
+              <input
+                type="date"
+                id="fechaNacimiento"
+                name="fechaNacimiento"
+                value={formatDateForInput(filters.fechaNacimiento)}
+                onChange={(e) => setFilters({ ...filters, fechaNacimiento: new Date(e.target.value) })}
+                style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
+              />
+            </>
+          ) : (
+            <TouchableOpacity onPress={handleShowNacimientoPicker}>
               <TextInput
                 style={styles.input}
                 placeholder="Seleccione la fecha"
@@ -503,20 +555,15 @@ export default function Ganado() {
                 editable={false}
               />
             </TouchableOpacity>
-            {showNacimientoPicker && (
-              <DateTimePicker
-                value={form.fechaNacimiento}
-                mode="date"
-                display="default"
-                onChange={(event, selectedDate) => {
-                  setShowNacimientoPicker(false);
-                  setForm({
-                    ...form,
-                    fechaNacimiento: selectedDate || form.fechaNacimiento,
-                  });
-                }}
-              />
-            )}
+          )}
+          {showNacimientoPicker && Platform.OS !== 'web' && (
+            <DateTimePicker
+              value={form.fechaNacimiento}
+              mode="date"
+              display="default"
+              onChange={handleFechaNacimientoChange}
+            />
+          )}
 
             <Button
               title={currentGanado ? "Actualizar" : "Guardar"}
