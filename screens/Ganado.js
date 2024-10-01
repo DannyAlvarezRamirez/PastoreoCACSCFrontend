@@ -17,7 +17,7 @@ import DateTimePicker from "@react-native-community/datetimepicker"; // For date
 import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
 import request from "../objects/request";
 
-// Helper function to format dates to 'YYYY-MM-DD' for web input fields
+// Helper function to format dates to 'YYYY-MM-DD' for web input fields 
 const formatDateForInput = (date) => {
     if (date instanceof Date && !isNaN(date)) {
         return date.toISOString().substring(0, 10);
