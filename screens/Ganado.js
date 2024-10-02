@@ -16,6 +16,7 @@ import { Picker } from "@react-native-picker/picker"; // For dropdowns
 import DateTimePicker from "@react-native-community/datetimepicker"; // For date pickers
 import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
 import request from "../objects/request";
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token and user data
 
 // Helper function to format dates to 'YYYY-MM-DD' for web input fields 
 const formatDateForInput = (date) => {
@@ -29,14 +30,14 @@ export default function Ganado() {
   const [ganado, setGanado] = useState([]);
   const [currentGanado, setCurrentGanado] = useState(null);
   const [form, setForm] = useState({
-    raza: 0,
+    razaId: 0,
     peso: 0,
-    sexo: 0,
+    sexoId: 0,
     edad: 0,
-    estadoSalud: 0,
-    fechaChequeo: new Date(),
-    productividad: 0,
-    tratamientos: 0,
+    estadoSaludId: 0,
+    ultimoChequeo: new Date(),
+    productividadId: 0,
+    tratamientoId: 0,
     fechaNacimiento: new Date(),
   });
   const [filters, setFilters] = useState({ ...form }); // State to handle the filter inputs
@@ -52,18 +53,19 @@ export default function Ganado() {
   const [isDialogVisible, setIsDialogVisible] = useState(false); // State for dialog visibility
   const [dialogMessage, setDialogMessage] = useState(""); // State for the dialog message
 
+
   // Function to clear form after saving or canceling
   const clearForm = () => {
     setCurrentGanado(null);
     setForm({
-      raza: 0,
+      razaId: 0,
       peso: 0,
-      sexo: 0,
+      sexoId: 0,
       edad: 0,
-      estadoSalud: 0,
-      fechaChequeo: new Date(),
-      productividad: 0,
-      tratamientos: 0,
+      estadoSaludId: 0,
+      ultimoChequeo: new Date(),
+      productividadId: 0,
+      tratamientoId: 0,
       fechaNacimiento: new Date(),
     });
   };
@@ -71,13 +73,22 @@ export default function Ganado() {
   // Function to save or update Ganado (Create/Update)
   const handleSave = async () => {
     try {
+        // Retrieve the username from AsyncStorage
+        const username = await AsyncStorage.getItem('user');
+
+        // Add the username to the form data before making the request
+        const formDataWithUsername = {
+            ...form,
+            creadoPor: username, // Add the username retrieved from AsyncStorage
+        };
+
       if (currentGanado === null) {
         // Create a new Ganado (Guardar)
         request.setConfig({
           method: "post",
           withCredentials: true,
           url: "http://localhost:5075/api/Ganado/create", // Replace with your API endpoint for creating Ganado
-          data: form, // Send the form data
+          data: formDataWithUsername, // Send the form data with username
         });
         const response = await request.sendRequest();
 
@@ -92,8 +103,8 @@ export default function Ganado() {
         request.setConfig({
           method: "put",
           withCredentials: true,
-          url: `http://localhost:5075/api/Ganado/update/${currentGanado.id}`, // Replace with your API endpoint for updating Ganado
-          data: form, // Send the form data
+          url: `http://localhost:5075/api/Ganado/update/${currentGanado.ganadoId}`, // Replace with API endpoint for updating Ganado
+          data: formDataWithUsername, // Send the form data with username
         });
         const response = await request.sendRequest();
 
@@ -101,7 +112,7 @@ export default function Ganado() {
           setDialogMessage("Ganado actualizado exitosamente.");
           setGanado(
             ganado.map((item) =>
-              item.id === currentGanado.id ? { ...response.data } : item
+              item.id === currentGanado.ganadoId ? { ...response.data } : item
             )
           );
         } else {
@@ -123,9 +134,36 @@ export default function Ganado() {
 
   const handleEdit = (item) => {
     setCurrentGanado(item);
-    setForm(item);
+    // Set the form with the selected item details
+    setForm({
+      razaId: item.razaId || 0,
+      peso: item.peso || 0,
+      sexoId: item.sexoId || 0,
+      edad: item.edad || 0,
+      estadoSaludId: item.estadoSaludId || 0,
+      ultimoChequeo: new Date(item.ultimoChequeo) || new Date(),
+      productividadId: item.productividadId || 0,
+      tratamientoId: item.tratamientoId || 0,
+      fechaNacimiento: new Date(item.fechaNacimiento) || new Date(),
+    });
+    setIsSearchModalVisible(false); // Close search modal for editing
     setIsModalVisible(true); // Open modal for editing
-  };
+    };
+
+    const handleClose = () => {
+        clearForm();
+        setIsModalVisible(false);
+    };
+
+    const handleResultClose = () => {
+        clearForm();
+        setIsSearchModalVisible(false);
+    };
+
+    const handleCreate = () => {
+        clearForm();
+        setIsModalVisible(true);
+    };
 
   // Function to delete Ganado (Eliminar)
   const handleDelete = async (id) => {
@@ -137,12 +175,14 @@ export default function Ganado() {
       });
       const response = await request.sendRequest();
 
-      if (response.success) {
-        setDialogMessage("Ganado eliminado exitosamente.");
-        setGanado(ganado.filter((item) => item.id !== id)); // Remove the deleted ganado from the list
-      } else {
-        setDialogMessage("Error al eliminar el ganado.");
-      }
+        if (response.success) {
+            setIsSearchModalVisible(false);
+            setDialogMessage("Ganado eliminado exitosamente.");
+            setGanado(ganado.filter((item) => item.id !== id)); // Remove the deleted ganado from the list
+        }
+        else {
+            setDialogMessage("Error al eliminar el ganado.");
+        }
     } catch (error) {
       setDialogMessage(
         "Ha ocurrido un problema. Inténtelo de nuevo más tarde."
@@ -164,9 +204,9 @@ export default function Ganado() {
         setShowNacimientoPicker(true);
     };
 
-    const handleFechaChequeoChange = (event, selectedDate) => {
+    const handleUltimoChequeoChange = (event, selectedDate) => {
         setShowChequeoPicker(false);
-        if (selectedDate) setForm({ ...form, fechaChequeo: selectedDate });
+        if (selectedDate) setForm({ ...form, ultimoChequeo: selectedDate });
     };
 
     const handleFechaNacimientoChange = (event, selectedDate) => {
@@ -220,13 +260,14 @@ export default function Ganado() {
         setSexos(response.data[0].sexos || []);
         setEstadosSalud(response.data[0].estadosSalud || []);
         setProductividades(response.data[0].productividades || []);
-          setTratamientos(response.data[0].tratamientos || []);
-          console.log(razas.toString(), '-razas list');
-      } else {
+        setTratamientos(response.data[0].tratamientos || []);
+      }
+      else {
         setDialogMessage("No se pudieron cargar las opciones de los filtros.");
         setIsDialogVisible(true);
       }
-    } catch (error) {
+    }
+    catch (error) {
       setDialogMessage(
         "Ha ocurrido un problema al cargar las opciones de los filtros. Inténtelo de nuevo más tarde."
       );
@@ -249,8 +290,8 @@ export default function Ganado() {
 
           <Text>Raza</Text>
           <Picker
-            selectedValue={filters.raza}
-            onValueChange={(value) => setFilters({ ...filters, raza: value })}
+            selectedValue={filters.razaId}
+            onValueChange={(value) => setFilters({ ...filters, razaId: value })}
             style={styles.picker}
           >
             <Picker.Item label="Seleccione la Raza" value="" />
@@ -270,8 +311,8 @@ export default function Ganado() {
 
           <Text>Sexo</Text>
           <Picker
-            selectedValue={filters.sexo}
-            onValueChange={(value) => setFilters({ ...filters, sexo: value })}
+            selectedValue={filters.sexoId}
+            onValueChange={(value) => setFilters({ ...filters, sexoId: value })}
             style={styles.picker}
           >
             <Picker.Item label="Seleccione el Sexo" value="" />
@@ -291,23 +332,23 @@ export default function Ganado() {
 
           <Text>Estado de Salud</Text>
           <Picker
-            selectedValue={filters.estadoSalud}
+            selectedValue={filters.estadoSaludId}
             onValueChange={(value) =>
-              setFilters({ ...filters, estadoSalud: value })
+              setFilters({ ...filters, estadoSaludId: value })
             }
             style={styles.picker}
           >
             <Picker.Item label="Seleccione el Estado de Salud" value="" />
             {estadosSalud.map((estado) => (
-              <Picker.Item key={estado.estadoId} label={estado.descripcion} value={estado.estadoId} />
+              <Picker.Item key={estado.estadoSaludId} label={estado.descripcion} value={estado.estadoSaludId} />
             ))}
           </Picker>
 
           <Text>Productividad</Text>
           <Picker
-            selectedValue={filters.productividad}
+            selectedValue={filters.productividadId}
             onValueChange={(value) =>
-              setFilters({ ...filters, productividad: value })
+              setFilters({ ...filters, productividadId: value })
             }
             style={styles.picker}
           >
@@ -319,9 +360,9 @@ export default function Ganado() {
 
           <Text>Tratamientos</Text>
           <Picker
-            selectedValue={filters.tratamientos}
+            selectedValue={filters.tratamientoId}
             onValueChange={(value) =>
-              setFilters({ ...filters, tratamientos: value })
+              setFilters({ ...filters, tratamientoId: value })
             }
             style={styles.picker}
           >
@@ -334,13 +375,13 @@ export default function Ganado() {
           {/* Fecha de Último Chequeo */}
           {Platform.OS === 'web' ? (
             <>
-              <label htmlFor="fechaChequeo">Fecha de Último Chequeo</label>
+              <label htmlFor="ultimoChequeo">Fecha de Último Chequeo</label>
               <input
                 type="date"
-                id="fechaChequeo"
-                name="fechaChequeo"
-                value={formatDateForInput(filters.fechaChequeo)}
-                onChange={(e) => setFilters({ ...filters, fechaChequeo: new Date(e.target.value) })}
+                id="ultimoChequeo"
+                name="ultimoChequeo"
+                value={formatDateForInput(filters.ultimoChequeo)}
+                onChange={(e) => setFilters({ ...filters, ultimoChequeo: new Date(e.target.value) })}
                 style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
               />
             </>
@@ -349,17 +390,17 @@ export default function Ganado() {
               <TextInput
                 style={styles.input}
                 placeholder="Seleccione la fecha"
-                value={form.fechaChequeo.toLocaleDateString()}
+                value={form.ultimoChequeo.toLocaleDateString()}
                 editable={false}
               />
             </TouchableOpacity>
           )}
           {showChequeoPicker && Platform.OS !== 'web' && (
             <DateTimePicker
-              value={form.fechaChequeo}
+              value={form.ultimoChequeo}
               mode="date"
               display="default"
-              onChange={handleFechaChequeoChange}
+              onChange={handleUltimoChequeoChange}
             />
           )}
 
@@ -401,7 +442,7 @@ export default function Ganado() {
         {/* Button to open modal for creating new Ganado */}
         <Button
           title="Crear Nuevo Ganado"
-          onPress={() => setIsModalVisible(true)}
+          onPress={handleCreate}
         />
 
         {/* Modal for creating/updating Ganado */}
@@ -419,8 +460,8 @@ export default function Ganado() {
 
             <Text>Raza</Text>
             <Picker
-              selectedValue={form.raza}
-              onValueChange={(value) => setForm({ ...form, raza: value })}
+              selectedValue={form.razaId}
+              onValueChange={(value) => setForm({ ...form, razaId: value })}
               style={styles.picker}
             >
               <Picker.Item label="Seleccione la Raza" value="" />
@@ -440,8 +481,8 @@ export default function Ganado() {
 
             <Text>Sexo</Text>
             <Picker
-              selectedValue={form.sexo}
-              onValueChange={(value) => setForm({ ...form, sexo: value })}
+              selectedValue={form.sexoId}
+              onValueChange={(value) => setForm({ ...form, sexoId: value })}
               style={styles.picker}
             >
               <Picker.Item label="Seleccione el Sexo" value="" />
@@ -461,23 +502,23 @@ export default function Ganado() {
 
             <Text>Estado de Salud</Text>
             <Picker
-              selectedValue={form.estadoSalud}
+              selectedValue={form.estadoSaludId}
               onValueChange={(value) =>
-                setForm({ ...form, estadoSalud: value })
+                setForm({ ...form, estadoSaludId: value })
               }
               style={styles.picker}
             >
               <Picker.Item label="Seleccione el Estado de Salud" value="" />
               {estadosSalud.map((estado) => (
-                <Picker.Item key={estado.estadoId} label={estado.descripcion} value={estado.estadoId} />
+                <Picker.Item key={estado.estadoSaludId} label={estado.descripcion} value={estado.estadoSaludId} />
               ))}
             </Picker>
 
             <Text>Productividad</Text>
             <Picker
-              selectedValue={form.productividad}
+              selectedValue={form.productividadId}
               onValueChange={(value) =>
-                setForm({ ...form, productividad: value })
+                setForm({ ...form, productividadId: value })
               }
               style={styles.picker}
             >
@@ -489,9 +530,9 @@ export default function Ganado() {
 
             <Text>Tratamientos</Text>
             <Picker
-              selectedValue={form.tratamientos}
+              selectedValue={form.tratamientoId}
               onValueChange={(value) =>
-                setForm({ ...form, tratamientos: value })
+                setForm({ ...form, tratamientoId: value })
               }
               style={styles.picker}
             >
@@ -504,13 +545,13 @@ export default function Ganado() {
             {/* Fecha de Último Chequeo */}
           {Platform.OS === 'web' ? (
             <>
-              <label htmlFor="fechaChequeo">Fecha de Último Chequeo</label>
+              <label htmlFor="ultimoChequeo">Fecha de Último Chequeo</label>
               <input
                 type="date"
-                id="fechaChequeo"
-                name="fechaChequeo"
-                value={formatDateForInput(filters.fechaChequeo)}
-                onChange={(e) => setFilters({ ...filters, fechaChequeo: new Date(e.target.value) })}
+                id="ultimoChequeo"
+                name="ultimoChequeo"
+                value={formatDateForInput(form.ultimoChequeo)}
+                onChange={(e) => setForm({ ...form, ultimoChequeo: new Date(e.target.value) })}
                 style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
               />
             </>
@@ -519,17 +560,17 @@ export default function Ganado() {
               <TextInput
                 style={styles.input}
                 placeholder="Seleccione la fecha"
-                value={form.fechaChequeo.toLocaleDateString()}
+                value={form.ultimoChequeo.toLocaleDateString()}
                 editable={false}
               />
             </TouchableOpacity>
           )}
           {showChequeoPicker && Platform.OS !== 'web' && (
             <DateTimePicker
-              value={form.fechaChequeo}
+              value={form.ultimoChequeo}
               mode="date"
               display="default"
-              onChange={handleFechaChequeoChange}
+              onChange={handleUltimoChequeoChange}
             />
           )}
 
@@ -541,8 +582,8 @@ export default function Ganado() {
                 type="date"
                 id="fechaNacimiento"
                 name="fechaNacimiento"
-                value={formatDateForInput(filters.fechaNacimiento)}
-                onChange={(e) => setFilters({ ...filters, fechaNacimiento: new Date(e.target.value) })}
+                value={formatDateForInput(form.fechaNacimiento)}
+                onChange={(e) => setForm({ ...form, fechaNacimiento: new Date(e.target.value) })}
                 style={{ width: '100%', height: '40px', borderColor: '#ccc', borderWidth: '1px', marginBottom: '10px', padding: '0.4rem' }}
               />
             </>
@@ -571,7 +612,7 @@ export default function Ganado() {
             />
             <Button
               title="Cerrar"
-              onPress={() => setIsModalVisible(false)}
+              onPress={handleClose}
               color="gray"
             />
           </ScrollView>
@@ -593,13 +634,13 @@ export default function Ganado() {
               renderItem={({ item }) => (
                 <View style={styles.listItem}>
                   <Text>
-                    {item.edad} - {item.raza} - {item.identificacion}
+                    Edad: {item.edad} - Peso: {item.peso} - Fecha Nacimiento {item.fechaNacimiento}
                   </Text>
                   <View style={styles.buttons}>
                     <TouchableOpacity onPress={() => handleEdit(item)}>
                       <Text style={styles.editText}>Editar</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                    <TouchableOpacity onPress={() => handleDelete(item.ganadoId)}>
                       <Text style={styles.deleteText}>Eliminar</Text>
                     </TouchableOpacity>
                   </View>
@@ -614,7 +655,7 @@ export default function Ganado() {
 
             <Button
               title="Cerrar"
-              onPress={() => setIsSearchModalVisible(false)}
+              onPress={handleResultClose}
               color="gray"
             />
           </ScrollView>
