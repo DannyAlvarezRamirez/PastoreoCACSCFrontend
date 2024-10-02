@@ -79,7 +79,7 @@ export default function Ganado() {
         // Add the username to the form data before making the request
         const formDataWithUsername = {
             ...form,
-            creadoPor: username, // Add the username retrieved from AsyncStorage
+            creadoPor: username, // Add the username retrieved from AsyncStorage 
         };
 
       if (currentGanado === null) {
