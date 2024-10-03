@@ -88,7 +88,7 @@ export default function Ganado() {
           method: "post",
           withCredentials: true,
           url: "http://localhost:5075/api/Ganado/create", // Replace with your API endpoint for creating Ganado
-          data: formDataWithUsername, // Send the form data with username
+          data: formDataWithUsername, // Send the form data with username 
         });
         const response = await request.sendRequest();
 
