@@ -76,14 +76,14 @@ export default function Ganado() {
         // Retrieve the username from AsyncStorage
         const username = await AsyncStorage.getItem('user');
 
+      if (currentGanado === null) {
+        // Create a new Ganado (Guardar)
         // Add the username to the form data before making the request
         const formDataWithUsername = {
             ...form,
             creadoPor: username, // Add the username retrieved from AsyncStorage 
         };
 
-      if (currentGanado === null) {
-        // Create a new Ganado (Guardar)
         request.setConfig({
           method: "post",
           withCredentials: true,
@@ -100,10 +100,15 @@ export default function Ganado() {
         }
       } else {
         // Update an existing Ganado (Editar)
+        // Add the username to the form data before making the request
+        const formDataWithUsername = {
+            ...form,
+            modificadoPor: username, // Add the username retrieved from AsyncStorage 
+        };
         request.setConfig({
           method: "put",
           withCredentials: true,
-          url: `http://localhost:5075/api/Ganado/update/${currentGanado.ganadoId}`, // Replace with API endpoint for updating Ganado
+          url: `http://localhost:5075/api/Ganado/update/${currentGanado.id}`, // Replace with API endpoint for updating Ganado
           data: formDataWithUsername, // Send the form data with username
         });
         const response = await request.sendRequest();
@@ -112,7 +117,7 @@ export default function Ganado() {
           setDialogMessage("Ganado actualizado exitosamente.");
           setGanado(
             ganado.map((item) =>
-              item.id === currentGanado.ganadoId ? { ...response.data } : item
+              item.id === currentGanado.id ? { ...response.data } : item
             )
           );
         } else {
@@ -640,7 +645,7 @@ export default function Ganado() {
                     <TouchableOpacity onPress={() => handleEdit(item)}>
                       <Text style={styles.editText}>Editar</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(item.ganadoId)}>
+                    <TouchableOpacity onPress={() => handleDelete(item.id)}>
                       <Text style={styles.deleteText}>Eliminar</Text>
                     </TouchableOpacity>
                   </View>
