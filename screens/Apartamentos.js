@@ -1,209 +1,447 @@
-import React, { useState } from 'react';
-import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, ScrollView, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
+import request from "../objects/request";
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token and user data
 
 export default function Apartamentos() {
   const [apartamentos, setApartamentos] = useState([]);
   const [currentApartamento, setCurrentApartamento] = useState(null);
-  const [isModalVisible, setIsModalVisible] = useState(false); // Modal visibility state
-
   const [form, setForm] = useState({
-    name: '',
-    tamano: '',
-    tipoPasto: '',
-    tipoTierra: '',
-    condicionesDrenaje: '',
-    exposicionSolar: '',
-    historialUso: '',
-    capacidadCarga: '',
-    distanciaRecursos: '',
-    proximidadInstalaciones: '',
-    frecuenciaUso: '',
+    tamanoArea: 0,
+    tipoPastoId: 0,
+    tipoTierraId: 0,
+    drenajeId: 0,
+    expoSolarId: 0,
+    capaCargaId: 0,
+    frecuenciaUsoId: 0,
   });
-
-  const handleSave = () => {
-    if (currentApartamento === null) {
-      setApartamentos([...apartamentos, { ...form, id: Date.now().toString() }]);
-    } else {
-      setApartamentos(
-        apartamentos.map(item =>
-          item.id === currentApartamento.id ? { ...form, id: currentApartamento.id } : item
-        )
-      );
-    }
-    setIsModalVisible(false); // Close modal after saving
-    clearForm();
-  };
-
-  const handleEdit = item => {
-    setCurrentApartamento(item);
-    setForm(item);
-    setIsModalVisible(true); // Open modal for editing
-  };
-
-  const handleDelete = id => {
-    setApartamentos(apartamentos.filter(item => item.id !== id));
-  };
+  const [filters, setFilters] = useState({ ...form }); // State to handle the filter inputs
+  const [tiposPasto, setTiposPasto] = useState([]); // State for tipoPasto options
+  const [tiposTierra, setTiposTierra] = useState([]); // State for tipoTierra options
+  const [drenajes, setDrenajes] = useState([]); // State for drenajes options
+  const [exposSolar, setExposSolar] = useState([]); // State for expoSolar options
+  const [capasCarga, setCapasCarga] = useState([]); // State for capaCarga options
+  const [frecuenciasUso, setFrecuenciasUso] = useState([]); // State for frecuenciaUso options
+  const [isModalVisible, setIsModalVisible] = useState(false); // State for modal visibility (form)
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false); // State for search result modal visibility
+  const [isDialogVisible, setIsDialogVisible] = useState(false); // State for dialog visibility
+  const [dialogMessage, setDialogMessage] = useState(""); // State for the dialog message
 
   const clearForm = () => {
     setCurrentApartamento(null);
     setForm({
-      name: '',
-      tamano: '',
-      tipoPasto: '',
-      tipoTierra: '',
-      condicionesDrenaje: '',
-      exposicionSolar: '',
-      historialUso: '',
-      capacidadCarga: '',
-      distanciaRecursos: '',
-      proximidadInstalaciones: '',
-      frecuenciaUso: '',
+      tamanoArea: 0,
+      tipoPastoId: 0,
+      tipoTierraId: 0,
+      drenajeId: 0,
+      expoSolarId: 0,
+      capaCargaId: 0,
+      frecuenciaUsoId: 0,
     });
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <Text style={styles.title}>Lista de Apartamentos</Text>
+  const handleSave = async () => {
+    try {
+        // Retrieve the username from AsyncStorage
+        const username = await AsyncStorage.getItem('user');
 
-      {/* Button to open modal for creating new Apartamento */}
-      <Button title="Crear Nuevo Apartamento" onPress={() => setIsModalVisible(true)} />
+      if (currentApartamento === null) {
+        // Create a new Apartamento (Guardar)
+        // Add the username to the form data before making the request
+        const formDataWithUsername = {
+            ...form,
+            creadoPor: username, // Add the username retrieved from AsyncStorage 
+        };
 
-      {/* Modal for creating/updating Apartamento */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.title}>{currentApartamento ? 'Editar Apartamento' : 'Crear Nuevo Apartamento'}</Text>
+        request.setConfig({
+          method: "post",
+          withCredentials: true,
+          url: "http://localhost:5075/api/Apartamentos/create", // Replace with your API endpoint for creating Apartamentos
+          data: formDataWithUsername, // Send the form data with username 
+        });
+        const response = await request.sendRequest();
 
-          {/* Name Field */}
-          <Text>Nombre del Apartamento</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nombre"
-            value={form.name}
-            onChangeText={text => setForm({ ...form, name: text })}
-          />
+        if (response.success) {
+          setDialogMessage("Apartamento creado exitosamente.");
+          setApartamentos([...apartamentos, response.data]); // Add the new apartamento to the list
+        }
+        else {
+          setDialogMessage("Error al crear el apartamento.");
+        }
+      }
+      else {
+        // Update an existing Apartamento (Editar)
+        // Add the username to the form data before making the request
+        const formDataWithUsername = {
+            ...form,
+            modificadoPor: username, // Add the username retrieved from AsyncStorage 
+        };
+        request.setConfig({
+          method: "put",
+          withCredentials: true,
+          url: `http://localhost:5075/api/Apartamentos/update/${currentApartamento.id}`, // Replace with API endpoint for updating Apartamento
+          data: formDataWithUsername, // Send the form data with username
+        });
+        const response = await request.sendRequest();
 
-          {/* Form for creating/updating an entry */}
-          <TextInput
-            style={styles.input}
-            placeholder="Tamaño del Área (hectáreas)"
-            value={form.tamano}
-            onChangeText={text => setForm({ ...form, tamano: text })}
-            keyboardType="numeric"
-          />
+        if (response.success) {
+          setDialogMessage("Apartamento actualizado exitosamente.");
+          setApartamentos(
+            apartamentos.map((item) =>
+              item.id === currentApartamento.id ? { ...response.data } : item
+            )
+          );
+        } else {
+          setDialogMessage("Error al actualizar el ganado.");
+        }
+      }
 
-          <Text>Tipo de Pasto</Text>
-          <Picker
-            selectedValue={form.tipoPasto}
-            onValueChange={value => setForm({ ...form, tipoPasto: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Seleccione el Tipo de Pasto" value="" />
-            <Picker.Item label="Pasto 1" value="pasto1" />
-            <Picker.Item label="Pasto 2" value="pasto2" />
-          </Picker>
+      setIsModalVisible(false); // Close modal after saving
+      clearForm();
+    }
+    catch (error) {
+      setDialogMessage(
+        "Ha ocurrido un problema. Inténtelo de nuevo más tarde."
+      );
+      console.error("Error:", error);
+    }
 
-          <Text>Tipo de Tierra</Text>
-          <Picker
-            selectedValue={form.tipoTierra}
-            onValueChange={value => setForm({ ...form, tipoTierra: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Seleccione el Tipo de Tierra" value="" />
-            <Picker.Item label="Tierra 1" value="tierra1" />
-            <Picker.Item label="Tierra 2" value="tierra2" />
-          </Picker>
+    setIsDialogVisible(true); // Show dialog with the result
+  };
 
-          <Text>Condiciones de Drenaje</Text>
-          <Picker
-            selectedValue={form.condicionesDrenaje}
-            onValueChange={value => setForm({ ...form, condicionesDrenaje: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Seleccione las Condiciones de Drenaje" value="" />
-            <Picker.Item label="Buena" value="buena" />
-            <Picker.Item label="Mala" value="mala" />
-          </Picker>
+  const handleEdit = (item) => {
+    setCurrentApartamento(item);
+    // Set the form with the selected item details
+    setForm({
+      tamanoArea: item.tamanoArea || 0,
+      tipoPastoId: item.tipoPastoId || 0,
+      tipoTierraId: item.tipoTierraId || 0,
+      drenajeId: item.drenajeId || 0,
+      expoSolarId: item.expoSolarId || new Date(),
+      capaCargaId: item.capaCargaId || 0,
+      frecuenciaUsoId: item.frecuenciaUsoId || 0,
+    });
+    setIsSearchModalVisible(false); // Close search modal for editing
+    setIsModalVisible(true); // Open modal for editing
+  };
 
-          <Text>Exposición Solar</Text>
-          <Picker
-            selectedValue={form.exposicionSolar}
-            onValueChange={value => setForm({ ...form, exposicionSolar: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Seleccione la Exposición Solar" value="" />
-            <Picker.Item label="Alta" value="alta" />
-            <Picker.Item label="Media" value="media" />
-            <Picker.Item label="Baja" value="baja" />
-          </Picker>
+    const handleClose = () => {
+        clearForm();
+        setIsModalVisible(false);
+    };
 
-          <Text>Historial de Uso</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Historial de Uso"
-            value={form.historialUso}
-            onChangeText={text => setForm({ ...form, historialUso: text })}
-            multiline
-          />
+    const handleResultClose = () => {
+        clearForm();
+        setIsSearchModalVisible(false);
+    };
 
-          <Text>Capacidad de Carga</Text>
-          <Picker
-            selectedValue={form.capacidadCarga}
-            onValueChange={value => setForm({ ...form, capacidadCarga: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Seleccione la Capacidad de Carga" value="" />
-            <Picker.Item label="Alta" value="alta" />
-            <Picker.Item label="Media" value="media" />
-            <Picker.Item label="Baja" value="baja" />
-          </Picker>
+    const handleCreate = () => {
+        clearForm();
+        setIsModalVisible(true);
+    };
 
-          <Text>Frecuencia de Uso</Text>
-          <Picker
-            selectedValue={form.frecuenciaUso}
-            onValueChange={value => setForm({ ...form, frecuenciaUso: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Seleccione la Frecuencia de Uso" value="" />
-            <Picker.Item label="Alta" value="alta" />
-            <Picker.Item label="Media" value="media" />
-            <Picker.Item label="Baja" value="baja" />
-          </Picker>
+  const handleDelete = async (id) => {
+    try {
+      request.setConfig({
+        method: "delete",
+        withCredentials: true,
+        url: `http://localhost:5075/api/Apartamentos/delete/${id}`, // Replace with your API endpoint for deleting Apartamento
+      });
+      const response = await request.sendRequest();
 
-          <Button title={currentApartamento ? 'Actualizar' : 'Guardar'} onPress={handleSave} />
-          <Button title="Cerrar" onPress={() => setIsModalVisible(false)} color="gray" />
-        </ScrollView>
-      </Modal>
+        if (response.success) {
+            setIsSearchModalVisible(false);
+            setDialogMessage("Apartamento eliminado exitosamente.");
+            setApartamentos(apartamentos.filter((item) => item.id !== id)); // Remove the deleted apartamento from the list
+        }
+        else {
+            setDialogMessage("Error al eliminar el apartamento.");
+        }
+    } catch (error) {
+      setDialogMessage(
+        "Ha ocurrido un problema. Inténtelo de nuevo más tarde."
+      );
+      console.error("Error:", error);
+    }
 
-      {/* List of Apartamentos */}
-      <FlatList
-        data={apartamentos}
-        keyExtractor={(item, index) => `key-${index}`}
-        renderItem={({ item }) => (
-          <View style={styles.listItem}>
-            <Text>{item.name} - {item.tamano} hectáreas - {item.tipoPasto}</Text>
-            <View style={styles.buttons}>
-              <TouchableOpacity onPress={() => handleEdit(item)}>
-                <Text style={styles.editText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ListFooterComponent={() => (
-          <View>
-            <Text></Text>
-          </View>
-        )}
-      />
-    </SafeAreaView>
-  );
+    setIsDialogVisible(true); // Show dialog with the result
+    };
+
+    // Function to handle the search based on filters
+    const handleSearch = async () => {
+        try {
+            // Set up the API request to search ganado with the filter criteria
+            request.setConfig({
+                method: "post",
+                withCredentials: true,
+                url: "http://localhost:5075/api/Apartamentos/search", // Replace with your API endpoint
+                data: filters, // Send the filters in the request body
+            });
+
+            // Send the request
+            const response = await request.sendRequest();
+
+            if (response.success && response.data.length > 0) {
+                setApartamentos(response.data); // Set the apartamentos data from the API response
+                setIsSearchModalVisible(true); // Open the modal with search results
+            } else {
+                setDialogMessage("No se encontraron resultados.");
+                setIsDialogVisible(true); // Show dialog if no results are found
+            }
+        } catch (error) {
+            setDialogMessage(
+                "Ha ocurrido un problema. Inténtelo de nuevo más tarde."
+            );
+            setIsDialogVisible(true); // Show dialog if there is an error
+            console.error("Error:", error);
+        }
+    };
+
+    // Function to fetch dropdown options from the API
+    const fetchDropdownOptions = async () => {
+        try {
+            request.setConfig({
+                method: "get",
+                withCredentials: true,
+                url: "http://localhost:5075/api/Apartamentos/dropdownsApartamentos", // Replace with your API endpoint for dropdown Apartamentos options
+            });
+
+            const response = await request.sendRequest();
+
+            if (response.success) {
+                setTiposPasto(response.data[0].tiposPasto || []);
+                setTiposTierra(response.data[0].tiposTierra || []);
+                setDrenajes(response.data[0].drenajes || []);
+                setExposSolar(response.data[0].exposSolar || []);
+                setCapasCarga(response.data[0].capasCarga || []);
+                setFrecuenciasUso(response.data[0].frecuenciasUso || []);
+            }
+            else {
+                setDialogMessage("No se pudieron cargar las opciones de los filtros.");
+                setIsDialogVisible(true);
+            }
+        }
+        catch (error) {
+            setDialogMessage(
+                "Ha ocurrido un problema al cargar las opciones de los filtros. Inténtelo de nuevo más tarde."
+            );
+            setIsDialogVisible(true);
+            console.error("Error:", error);
+        }
+    };
+
+    // Fetch the dropdown options when the component mounts
+    useEffect(() => {
+        fetchDropdownOptions();
+    }, []);
+
+    return (
+        <Provider>
+            <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+                {/* Filters section */}
+                <ScrollView contentContainerStyle={styles.container}>
+                    <Text style={styles.title}>Buscar Apartamento</Text>
+
+                    <Text>Tamaño del Área</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Tamaño del Área"
+                        value={filters.tamanoArea.toString()}
+                        onChangeText={(text) => setFilters({ ...filters, tamanoArea: text })}
+                        keyboardType="numeric"
+                    />
+
+                    <Text>Tipo de Pasto</Text>
+                    <Picker
+                        selectedValue={filters.tipoPastoId}
+                        onValueChange={(value) => setFilters({ ...filters, tipoPastoId: value })}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Seleccione el Tipo de Pasto" value="" />
+                        {tiposPasto.map((pasto) => (
+                            <Picker.Item key={pasto.tipoPastoId} label={pasto.descripcion} value={pasto.tipoPastoId} />
+                        ))}
+                    </Picker>
+
+                    <Text>Tipo de Tierra</Text>
+                    <Picker
+                        selectedValue={filters.tipoTierraId}
+                        onValueChange={(value) => setFilters({ ...filters, tipoTierraId: value })}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Seleccione el Tipo de Tierra" value="" />
+                        {tiposTierra.map((tierra) => (
+                            <Picker.Item key={tierra.tipoTierraId} label={tierra.descripcion} value={tierra.tipoTierraId} />
+                        ))}
+                    </Picker>
+
+                    <Text>Drenaje</Text>
+                    <Picker
+                        selectedValue={filters.drenajeId}
+                        onValueChange={(value) => setFilters({ ...filters, drenajeId: value })}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Seleccione el Drenaje" value="" />
+                        {drenajes.map((drenaje) => (
+                            <Picker.Item key={drenaje.drenajeId} label={drenaje.descripcion} value={drenaje.drenajeId} />
+                        ))}
+                    </Picker>
+
+                    <Text>Exposición Solar</Text>
+                    <Picker
+                        selectedValue={filters.expoSolarId}
+                        onValueChange={(value) => setFilters({ ...filters, expoSolarId: value })}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Seleccione la Exposición Solar" value="" />
+                        {exposSolar.map((solar) => (
+                            <Picker.Item key={solar.expoSolarId} label={solar.descripcion} value={solar.expoSolarId} />
+                        ))}
+                    </Picker>
+
+                    <Text>Capa de Carga</Text>
+                    <Picker
+                        selectedValue={filters.capaCargaId}
+                        onValueChange={(value) => setFilters({ ...filters, capaCargaId: value })}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Seleccione la Capa de Carga" value="" />
+                        {capasCarga.map((capa) => (
+                            <Picker.Item key={capa.capaCargaId} label={capa.descripcion} value={capa.capaCargaId} />
+                        ))}
+                    </Picker>
+
+                    <Text>Frecuencia de Uso</Text>
+                    <Picker
+                        selectedValue={filters.frecuenciaUsoId}
+                        onValueChange={(value) => setFilters({ ...filters, frecuenciaUsoId: value })}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Seleccione la Frecuencia de Uso" value="" />
+                        {frecuenciasUso.map((frecuencia) => (
+                            <Picker.Item key={frecuencia.frecuenciaUsoId} label={frecuencia.descripcion} value={frecuencia.frecuenciaUsoId} />
+                        ))}
+                    </Picker>
+
+                    <Button title="Buscar" onPress={handleSearch} />
+                </ScrollView>
+
+                {/* Button to open modal for creating new Apartamento */}
+                <Button title="Crear Nuevo Apartamento" onPress={handleCreate} />
+
+                {/* Modal for creating/updating Apartamento */}
+                <Modal visible={isModalVisible} animationType="slide" onRequestClose={handleClose}>
+                    <ScrollView contentContainerStyle={styles.container}>
+                        <Text style={styles.title}>{currentApartamento ? "Editar Apartamento" : "Crear Nuevo Apartamento"}</Text>
+
+                        <Text>Tamaño del Área</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Tamaño del Área"
+                            value={form.tamanoArea.toString()}
+                            onChangeText={(text) => setForm({ ...form, tamanoArea: text })}
+                            keyboardType="numeric"
+                        />
+
+                        <Text>Tipo de Pasto</Text>
+                        <Picker selectedValue={form.tipoPastoId} onValueChange={(value) => setForm({ ...form, tipoPastoId: value })} style={styles.picker}>
+                            <Picker.Item label="Seleccione el Tipo de Pasto" value="" />
+                            {tiposPasto.map((pasto) => (
+                                <Picker.Item key={pasto.tipoPastoId} label={pasto.descripcion} value={pasto.tipoPastoId} />
+                            ))}
+                        </Picker>
+
+                        <Text>Tipo de Tierra</Text>
+                        <Picker selectedValue={form.tipoTierraId} onValueChange={(value) => setForm({ ...form, tipoTierraId: value })} style={styles.picker}>
+                            <Picker.Item label="Seleccione el Tipo de Tierra" value="" />
+                            {tiposTierra.map((tierra) => (
+                                <Picker.Item key={tierra.tipoTierraId} label={tierra.descripcion} value={tierra.tipoTierraId} />
+                            ))}
+                        </Picker>
+
+                        <Text>Drenaje</Text>
+                        <Picker selectedValue={form.drenajeId} onValueChange={(value) => setForm({ ...form, drenajeId: value })} style={styles.picker}>
+                            <Picker.Item label="Seleccione el Drenaje" value="" />
+                            {drenajes.map((drenaje) => (
+                                <Picker.Item key={drenaje.drenajeId} label={drenaje.descripcion} value={drenaje.drenajeId} />
+                            ))}
+                        </Picker>
+
+                        <Text>Exposición Solar</Text>
+                        <Picker selectedValue={form.expoSolarId} onValueChange={(value) => setForm({ ...form, expoSolarId: value })} style={styles.picker}>
+                            <Picker.Item label="Seleccione la Exposición Solar" value="" />
+                            {exposSolar.map((solar) => (
+                                <Picker.Item key={solar.expoSolarId} label={solar.descripcion} value={solar.expoSolarId} />
+                            ))}
+                        </Picker>
+
+                        <Text>Capa de Carga</Text>
+                        <Picker selectedValue={form.capaCargaId} onValueChange={(value) => setForm({ ...form, capaCargaId: value })} style={styles.picker}>
+                            <Picker.Item label="Seleccione la Capa de Carga" value="" />
+                            {capasCarga.map((capa) => (
+                                <Picker.Item key={capa.capaCargaId} label={capa.descripcion} value={capa.capaCargaId} />
+                            ))}
+                        </Picker>
+
+                        <Text>Frecuencia de Uso</Text>
+                        <Picker selectedValue={form.frecuenciaUsoId} onValueChange={(value) => setForm({ ...form, frecuenciaUsoId: value })} style={styles.picker}>
+                            <Picker.Item label="Seleccione la Frecuencia de Uso" value="" />
+                            {frecuenciasUso.map((frecuencia) => (
+                                <Picker.Item key={frecuencia.frecuenciaUsoId} label={frecuencia.descripcion} value={frecuencia.frecuenciaUsoId} />
+                            ))}
+                        </Picker>
+
+                        <Button title={currentApartamento ? "Actualizar" : "Guardar"} onPress={handleSave} />
+                        <Button title="Cerrar" onPress={handleClose} color="gray" />
+                    </ScrollView>
+                </Modal>
+
+                {/* Modal to display the search results */}
+                <Modal visible={isSearchModalVisible} animationType="slide" onRequestClose={handleResultClose}>
+                    <ScrollView contentContainerStyle={styles.container}>
+                        <Text style={styles.title}>Resultados de la Búsqueda</Text>
+
+                        {/* Table of Apartamentos */}
+                        <FlatList
+                            data={apartamentos}
+                            keyExtractor={(item, index) => `key-${index}`}
+                            renderItem={({ item }) => (
+                                <View style={styles.listItem}>
+                                    <Text>Tamaño del Área: {item.tamanoArea} - Tipo de Pasto: {item.tipoPastoId}</Text>
+                                    <View style={styles.buttons}>
+                                        <TouchableOpacity onPress={() => handleEdit(item)}>
+                                            <Text style={styles.editText}>Editar</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                                            <Text style={styles.deleteText}>Eliminar</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
+                            ListFooterComponent={() => <View><Text></Text></View>}
+                        />
+
+                        <Button title="Cerrar" onPress={handleResultClose} color="gray" />
+                    </ScrollView>
+                </Modal>
+
+                {/* Dialog to display messages */}
+                <Portal>
+                    <Dialog visible={isDialogVisible} onDismiss={() => setIsDialogVisible(false)}>
+                        <Dialog.Title>Información</Dialog.Title>
+                        <Dialog.Content>
+                            <Text>{dialogMessage}</Text>
+                        </Dialog.Content>
+                        <Dialog.Actions>
+                            <Button title="OK" onPress={() => setIsDialogVisible(false)} />
+                        </Dialog.Actions>
+                    </Dialog>
+                </Portal>
+            </SafeAreaView>
+        </Provider>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -218,20 +456,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  input: {
+    width: "100%",
+    height: 40,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+    borderRadius: 5,
+  },
   picker: {
     width: '100%',
     height: 40,
     marginBottom: 10,
-  },
-  input: {
-    width: '100%',
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    borderRadius: 5,
   },
   textArea: {
     height: 80,

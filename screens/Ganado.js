@@ -153,7 +153,7 @@ export default function Ganado() {
     });
     setIsSearchModalVisible(false); // Close search modal for editing
     setIsModalVisible(true); // Open modal for editing
-    };
+  };
 
     const handleClose = () => {
         clearForm();

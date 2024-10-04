@@ -1,168 +1,347 @@
-import React, { useState } from 'react';
-import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, ScrollView, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Tooltip } from 'react-native-elements';
+import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
+import request from "../objects/request";
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token and user data
 
 export default function Suministros() {
   const [suministros, setSuministros] = useState([]);
   const [currentSuministro, setCurrentSuministro] = useState(null);
-  const [isModalVisible, setIsModalVisible] = useState(false); // For showing/hiding modal
-
   const [form, setForm] = useState({
-    name: '',
-    tipoSuministro: '',
-    notas: '',
-    cantidad: '',
+    cantidad: 0,
+    descripcion: '',
+    tipoSuministroId: 0,
   });
-
-  const handleSave = () => {
-    if (currentSuministro === null) {
-      setSuministros([...suministros, { ...form, id: Date.now().toString() }]);
-    } else {
-      setSuministros(
-        suministros.map(item =>
-          item.id === currentSuministro.id ? { ...form, id: currentSuministro.id } : item
-        )
-      );
-    }
-    setIsModalVisible(false); // Close the modal after saving
-    clearForm();
-  };
-
-  const handleEdit = item => {
-    setCurrentSuministro(item);
-    setForm(item);
-    setIsModalVisible(true); // Open modal for editing
-  };
-
-  const handleDelete = id => {
-    setSuministros(suministros.filter(item => item.id !== id));
-  };
+  const [filters, setFilters] = useState({ ...form }); // State to handle the filter inputs
+  const [tiposSuministro, setTiposSuministro] = useState([]); // State for tipoSuministro options
+  const [isModalVisible, setIsModalVisible] = useState(false); // State for modal visibility (form)
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false); // State for search result modal visibility
+  const [isDialogVisible, setIsDialogVisible] = useState(false); // State for dialog visibility
+  const [dialogMessage, setDialogMessage] = useState(""); // State for the dialog message
 
   const clearForm = () => {
     setCurrentSuministro(null);
     setForm({
-      name: '',
-      tipoSuministro: '',
-      notas: '',
-      cantidad: '',
+      cantidad: 0,
+      descripcion: '',
+      tipoSuministroId: 0,
     });
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <Text style={styles.title}>Lista de Suministros</Text>
+    const handleSave = async () => {
+        try {
+            // Retrieve the username from AsyncStorage
+            const username = await AsyncStorage.getItem('user');
 
-      {/* Button to open modal for creating new Suministro */}
-      <Button title="Crear Nuevo Suministro" onPress={() => setIsModalVisible(true)} />
+            if (currentSuministro === null) {
+                // Create a new Suministro (Guardar)
+                // Add the username to the form data before making the request
+                const formDataWithUsername = {
+                    ...form,
+                    creadoPor: username, // Add the username retrieved from AsyncStorage 
+                };
 
-      {/* Modal for creating/updating Suministro */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.title}>{currentSuministro ? 'Editar Suministro' : 'Crear Nuevo Suministro'}</Text>
+                request.setConfig({
+                    method: "post",
+                    withCredentials: true,
+                    url: "http://localhost:5075/api/Suministros/create", // Replace with your API endpoint for creating Suministros
+                    data: formDataWithUsername, // Send the form data with username 
+                });
+                const response = await request.sendRequest();
 
-          {/* Name Field */}
-          <Text>Nombre del Suministro</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nombre"
-            value={form.name}
-            onChangeText={text => setForm({ ...form, name: text })}
-          />
-
-          {/* Tipo de Suministro */}
-          <Text>Tipo de Suministro</Text>
-          <Picker
-            selectedValue={form.tipoSuministro}
-            onValueChange={value => setForm({ ...form, tipoSuministro: value })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Seleccione el Tipo de Suministro" value="" />
-            <Picker.Item label="Pasto" value="pasto" />
-            <Picker.Item label="Fertilizante" value="fertilizante" />
-            <Picker.Item label="Herbicida-Pesticida" value="herbicida-pesticida" />
-            <Picker.Item label="Alimento" value="alimento" />
-            <Picker.Item label="Equipo de Manejo" value="equipo-de-manejo" />
-            <Picker.Item label="Medicamento" value="medicamento" />
-            <Picker.Item label="Vacuna" value="vacuna" />
-            <Picker.Item label="Herramienta de Mantenimiento" value="herramienta-de-mantenimiento" />
-            <Picker.Item label="Otro Tipo" value="otro-tipo" />
-            <Picker.Item label="Agua" value="agua" />
-            <Picker.Item label="Energía" value="energia" />
-          </Picker>
-
-          {/* Notas */}
-          <Text>Notas</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Notas adicionales"
-            value={form.notas}
-            onChangeText={text => setForm({ ...form, notas: text })}
-            multiline
-          />
-
-          {/* Cantidad */}
-          <Text>Cantidad</Text>
-          <View style={styles.inputWithTooltip}>
-            <TextInput
-              style={styles.input}
-              placeholder={form.tipoSuministro === 'agua' ? "Litros" : form.tipoSuministro === 'energia' ? "Watts" : "Cantidad"}
-              value={form.cantidad}
-              onChangeText={text => setForm({ ...form, cantidad: text })}
-              keyboardType="numeric"
-            />
-            {(form.tipoSuministro === 'agua' || form.tipoSuministro === 'energia') && (
-              <Tooltip
-                popover={
-                  <Text style={styles.tooltipText}>
-                    Este campo puede estar vacío, si desea manejarlo de otra manera, por favor, contactar a soporte técnico.
-                  </Text>
+                if (response.success) {
+                    setDialogMessage("Suministro creado exitosamente.");
+                    setSuministros([...suministros, response.data]); // Add the new suministro to the list
                 }
-                height={100}
-                width={200}
-                backgroundColor="#000"
-                withOverlay={false}
-                containerStyle={{ justifyContent: 'center' }}
-              >
-                <Text style={styles.tooltipIcon}>ℹ️</Text>
-              </Tooltip>
-            )}
-          </View>
+                else {
+                    setDialogMessage("Error al crear el suministro.");
+                }
+            }
+            else {
+                // Update an existing Suministro (Editar)
+                // Add the username to the form data before making the request
+                const formDataWithUsername = {
+                    ...form,
+                    modificadoPor: username, // Add the username retrieved from AsyncStorage 
+                };
+                request.setConfig({
+                    method: "put",
+                    withCredentials: true,
+                    url: `http://localhost:5075/api/Suministros/update/${currentSuministro.id}`, // Replace with API endpoint for updating Suministro
+                    data: formDataWithUsername, // Send the form data with username
+                });
+                const response = await request.sendRequest();
 
-          <Button title={currentSuministro ? 'Actualizar' : 'Guardar'} onPress={handleSave} />
-          <Button title="Cerrar" onPress={() => setIsModalVisible(false)} color="gray" />
-        </ScrollView>
-      </Modal>
+                if (response.success) {
+                    setDialogMessage("Suministro actualizado exitosamente.");
+                    setSuministros(
+                        suministros.map((item) =>
+                            item.id === currentSuministro.id ? { ...response.data } : item
+                        )
+                    );
+                } else {
+                    setDialogMessage("Error al actualizar el ganado.");
+                }
+            }
 
-      {/* Table of Suministros */}
-      <FlatList
-        data={suministros}
-        keyExtractor={(item, index) => `key-${index}`}
-        renderItem={({ item }) => (
-          <View style={styles.listItem}>
-            <Text>{item.name} - {item.tipoSuministro} - {item.cantidad}</Text>
-            <View style={styles.buttons}>
-              <TouchableOpacity onPress={() => handleEdit(item)}>
-                <Text style={styles.editText}>Editar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                <Text style={styles.deleteText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ListFooterComponent={() => (
-          <View>
-            <Text></Text>
-          </View>
-        )}
-      />
-    </SafeAreaView>
-  );
+            setIsModalVisible(false); // Close modal after saving
+            clearForm();
+        }
+        catch (error) {
+            setDialogMessage(
+                "Ha ocurrido un problema. Inténtelo de nuevo más tarde."
+            );
+            console.error("Error:", error);
+        }
+
+        setIsDialogVisible(true); // Show dialog with the result
+    };
+
+    const handleEdit = (item) => {
+        setCurrentSuministro(item);
+        // Set the form with the selected item details
+        setForm({
+            cantidad: item.cantidad || 0,
+            descripcion: item.descripcion || '',
+            tipoSuministroId: item.tipoSuministroId || 0,
+        });
+        setIsSearchModalVisible(false); // Close search modal for editing
+        setIsModalVisible(true); // Open modal for editing
+    };
+
+    const handleClose = () => {
+        clearForm();
+        setIsModalVisible(false);
+    };
+
+    const handleResultClose = () => {
+        clearForm();
+        setIsSearchModalVisible(false);
+    };
+
+    const handleCreate = () => {
+        clearForm();
+        setIsModalVisible(true);
+    };
+
+    const handleDelete = async (id) => {
+        try {
+            request.setConfig({
+                method: "delete",
+                withCredentials: true,
+                url: `http://localhost:5075/api/Suministros/delete/${id}`, // Replace with your API endpoint for deleting Suministro
+            });
+            const response = await request.sendRequest();
+
+            if (response.success) {
+                setIsSearchModalVisible(false);
+                setDialogMessage("Suministro eliminado exitosamente.");
+                setSuministros(suministros.filter((item) => item.id !== id)); // Remove the deleted suministro from the list
+            }
+            else {
+                setDialogMessage("Error al eliminar el suministro.");
+            }
+        } catch (error) {
+            setDialogMessage(
+                "Ha ocurrido un problema. Inténtelo de nuevo más tarde."
+            );
+            console.error("Error:", error);
+        }
+
+        setIsDialogVisible(true); // Show dialog with the result
+    };
+
+    // Function to handle the search based on filters
+    const handleSearch = async () => {
+        try {
+            // Set up the API request to search suministros with the filter criteria
+            request.setConfig({
+                method: "post",
+                withCredentials: true,
+                url: "http://localhost:5075/api/Suministros/search", // Replace with your API endpoint
+                data: filters, // Send the filters in the request body
+            });
+
+            // Send the request
+            const response = await request.sendRequest();
+
+            if (response.success && response.data.length > 0) {
+                setSuministros(response.data); // Set the suministros data from the API response
+                setIsSearchModalVisible(true); // Open the modal with search results
+            } else {
+                setDialogMessage("No se encontraron resultados.");
+                setIsDialogVisible(true); // Show dialog if no results are found
+            }
+        } catch (error) {
+            setDialogMessage(
+                "Ha ocurrido un problema. Inténtelo de nuevo más tarde."
+            );
+            setIsDialogVisible(true); // Show dialog if there is an error
+            console.error("Error:", error);
+        }
+    };
+
+    // Function to fetch dropdown options from the API
+    const fetchDropdownOptions = async () => {
+        try {
+            request.setConfig({
+                method: "get",
+                withCredentials: true,
+                url: "http://localhost:5075/api/Suministros/dropdownsSuministros", // Replace with your API endpoint for dropdown Suministros options
+            });
+
+            const response = await request.sendRequest();
+
+            if (response.success) {
+                setTiposSuministro(response.data[0].tiposSuministro || []);
+            }
+            else {
+                setDialogMessage("No se pudieron cargar las opciones de los filtros.");
+                setIsDialogVisible(true);
+            }
+        }
+        catch (error) {
+            setDialogMessage(
+                "Ha ocurrido un problema al cargar las opciones de los filtros. Inténtelo de nuevo más tarde."
+            );
+            setIsDialogVisible(true);
+            console.error("Error:", error);
+        }
+    };
+
+    // Fetch the dropdown options when the component mounts
+    useEffect(() => {
+        fetchDropdownOptions();
+    }, []);
+
+    return (
+        <Provider>
+            <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+                {/* Filters section */}
+                <ScrollView contentContainerStyle={styles.container}>
+                    <Text style={styles.title}>Buscar Suministro</Text>
+
+                    <Text>Descripción</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Descripción"
+                        value={filters.descripcion}
+                        onChangeText={(text) => setFilters({ ...filters, descripcion: text })}
+                    />
+
+                    <Text>Cantidad</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Cantidad"
+                        value={filters.cantidad.toString()}
+                        onChangeText={(text) => setFilters({ ...filters, cantidad: text })}
+                        keyboardType="numeric"
+                    />
+
+                    <Text>Tipo de Suministro</Text>
+                    <Picker
+                        selectedValue={filters.tipoSuministroId}
+                        onValueChange={(value) => setFilters({ ...filters, tipoSuministroId: value })}
+                        style={styles.picker}
+                    >
+                        <Picker.Item label="Seleccione el Tipo de Suministro" value="" />
+                        {tiposSuministro.map((tipo) => (
+                            <Picker.Item key={tipo.id} label={tipo.descripcion} value={tipo.id} />
+                        ))}
+                    </Picker>
+
+                    <Button title="Buscar" onPress={handleSearch} />
+                </ScrollView>
+
+                {/* Button to open modal for creating new Suministro */}
+                <Button title="Crear Nuevo Suministro" onPress={handleCreate} />
+
+                {/* Modal for creating/updating Suministro */}
+                <Modal visible={isModalVisible} animationType="slide" onRequestClose={handleClose}>
+                    <ScrollView contentContainerStyle={styles.container}>
+                        <Text style={styles.title}>{currentSuministro ? "Editar Suministro" : "Crear Nuevo Suministro"}</Text>
+
+                        <Text>Descripción</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Descripción"
+                            value={form.descripcion}
+                            onChangeText={(text) => setForm({ ...form, descripcion: text })}
+                        />
+
+                        <Text>Cantidad</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Cantidad"
+                            value={form.cantidad.toString()}
+                            onChangeText={(text) => setForm({ ...form, cantidad: text })}
+                            keyboardType="numeric"
+                        />
+
+                        <Text>Tipo de Suministro</Text>
+                        <Picker
+                            selectedValue={form.tipoSuministroId}
+                            onValueChange={(value) => setForm({ ...form, tipoSuministroId: value })}
+                            style={styles.picker}
+                        >
+                            <Picker.Item label="Seleccione el Tipo de Suministro" value="" />
+                            {tiposSuministro.map((tipo) => (
+                                <Picker.Item key={tipo.id} label={tipo.descripcion} value={tipo.id} />
+                            ))}
+                        </Picker>
+
+                        <Button title={currentSuministro ? "Actualizar" : "Guardar"} onPress={handleSave} />
+                        <Button title="Cerrar" onPress={handleClose} color="gray" />
+                    </ScrollView>
+                </Modal>
+
+                {/* Modal to display the search results */}
+                <Modal visible={isSearchModalVisible} animationType="slide" onRequestClose={handleResultClose}>
+                    <ScrollView contentContainerStyle={styles.container}>
+                        <Text style={styles.title}>Resultados de la Búsqueda</Text>
+
+                        {/* Table of Suministros */}
+                        <FlatList
+                            data={suministros}
+                            keyExtractor={(item, index) => `key-${index}`}
+                            renderItem={({ item }) => (
+                                <View style={styles.listItem}>
+                                    <Text>
+                                        Descripción: {item.descripcion} - Cantidad: {item.cantidad} - Tipo: {item.tipoSuministroId}
+                                    </Text>
+                                    <View style={styles.buttons}>
+                                        <TouchableOpacity onPress={() => handleEdit(item)}>
+                                            <Text style={styles.editText}>Editar</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                                            <Text style={styles.deleteText}>Eliminar</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
+                            ListFooterComponent={() => <View><Text></Text></View>}
+                        />
+
+                        <Button title="Cerrar" onPress={handleResultClose} color="gray" />
+                    </ScrollView>
+                </Modal>
+
+                {/* Dialog to display messages */}
+                <Portal>
+                    <Dialog visible={isDialogVisible} onDismiss={() => setIsDialogVisible(false)}>
+                        <Dialog.Title>Información</Dialog.Title>
+                        <Dialog.Content>
+                            <Text>{dialogMessage}</Text>
+                        </Dialog.Content>
+                        <Dialog.Actions>
+                            <Button title="OK" onPress={() => setIsDialogVisible(false)} />
+                        </Dialog.Actions>
+                    </Dialog>
+                </Portal>
+            </SafeAreaView>
+        </Provider>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -199,14 +378,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
-  },
-  tooltipIcon: {
-    marginLeft: 5,
-    color: '#666',
-  },
-  tooltipText: {
-    color: '#fff',
-    fontSize: 14,
   },
   listItem: {
     padding: 10,
