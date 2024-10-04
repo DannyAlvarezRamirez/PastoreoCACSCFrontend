@@ -459,6 +459,6 @@ const styles = StyleSheet.create({
   },
   deleteText: {
       color: 'red',
-      opacity: 0.5,
+      opacity: 0.5, 
   },
 });
