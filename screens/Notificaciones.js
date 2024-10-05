@@ -167,7 +167,7 @@ export default function Notificaciones() {
             </View>
             <Text style={styles.subjectText}>{item.subject}</Text>
             <Text style={styles.messageText}>{item.message.substring(0, 10)}...</Text>
-
+             
             <TouchableOpacity onPress={() => setSelectedNotification(item)} style={styles.viewTableButton}>
                 <Text style={styles.viewTableButtonText}>Ver mensaje</Text>
             </TouchableOpacity>
