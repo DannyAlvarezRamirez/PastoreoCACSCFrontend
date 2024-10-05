@@ -10,6 +10,7 @@ export default function Apartamentos() {
   const [currentApartamento, setCurrentApartamento] = useState(null);
   const [form, setForm] = useState({
     tamanoArea: 0,
+    descripcion: '',
     tipoPastoId: 0,
     tipoTierraId: 0,
     drenajeId: 0,
@@ -33,6 +34,7 @@ export default function Apartamentos() {
     setCurrentApartamento(null);
     setForm({
       tamanoArea: 0,
+      descripcion: '',
       tipoPastoId: 0,
       tipoTierraId: 0,
       drenajeId: 0,
@@ -116,6 +118,7 @@ export default function Apartamentos() {
     // Set the form with the selected item details
     setForm({
       tamanoArea: item.tamanoArea || 0,
+      descripcion: item.descripcion || '',
       tipoPastoId: item.tipoPastoId || 0,
       tipoTierraId: item.tipoTierraId || 0,
       drenajeId: item.drenajeId || 0,
@@ -253,6 +256,14 @@ export default function Apartamentos() {
                         keyboardType="numeric"
                     />
 
+                    <Text>Descripción</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Descripción"
+                        value={filters.descripcion}
+                        onChangeText={(text) => setFilters({ ...filters, descripcion: text })}
+                    />
+
                     <Text>Tipo de Pasto</Text>
                     <Picker
                         selectedValue={filters.tipoPastoId}
@@ -345,6 +356,14 @@ export default function Apartamentos() {
                             keyboardType="numeric"
                         />
 
+                        <Text>Descripción</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Descripción"
+                            value={form.descripcion}
+                            onChangeText={(text) => setForm({ ...form, descripcion: text })}
+                        />
+
                         <Text>Tipo de Pasto</Text>
                         <Picker selectedValue={form.tipoPastoId} onValueChange={(value) => setForm({ ...form, tipoPastoId: value })} style={styles.picker}>
                             <Picker.Item label="Seleccione el Tipo de Pasto" value="" />
@@ -409,7 +428,7 @@ export default function Apartamentos() {
                             keyExtractor={(item, index) => `key-${index}`}
                             renderItem={({ item }) => (
                                 <View style={styles.listItem}>
-                                    <Text>Tamaño del Área: {item.tamanoArea} - Tipo de Pasto: {item.tipoPastoId}</Text>
+                                    <Text>Tamaño del Área: {item.tamanoArea} - Descripción: {item.descripcion} - Tipo de Pasto: {item.tipoPastoId}</Text>
                                     <View style={styles.buttons}>
                                         <TouchableOpacity onPress={() => handleEdit(item)}>
                                             <Text style={styles.editText}>Editar</Text>

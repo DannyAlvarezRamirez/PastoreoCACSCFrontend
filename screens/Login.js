@@ -43,6 +43,8 @@ export default function Login({ navigation, setIsAuthenticated  }) {
             // Store the token in AsyncStorage for future API calls
               await AsyncStorage.setItem('token', response.data[0].token);
               await AsyncStorage.setItem('user', response.data[0].user.username);
+              await AsyncStorage.setItem('userId', response.data[0].user.id);
+              await AsyncStorage.setItem('userRolId', response.data[0].user.rolId);
             setIsAuthenticated(true);  // Set authentication to true
             navigation.navigate('Dashboard');  // Navigate to Dashboard on successful login
           } else {
