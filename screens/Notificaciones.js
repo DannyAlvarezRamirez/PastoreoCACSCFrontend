@@ -10,74 +10,107 @@ import {
     Button,
     TextInput,
     ScrollView,
-    Platform
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Dialog, Portal, Provider } from 'react-native-paper';
+import { Dialog, Portal, Provider, Checkbox } from 'react-native-paper'; // Added Checkbox for user selection
 import request from '../objects/request';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // For retrieving user info
 
 export default function Notificaciones() {
     const [notifications, setNotifications] = useState([]);
+    const [users, setUsers] = useState([]); // List of users for sending notifications
+    const [selectedUsers, setSelectedUsers] = useState([]); // Selected users for the notification
     const [selectedNotification, setSelectedNotification] = useState(null);
-    const [modalVisible, setModalVisible] = useState(false); // For viewing modal
+    const [modalVisible, setModalVisible] = useState(false); // For viewing and editing modal
+    const [viewMessageModalVisible, setViewMessageModalVisible] = useState(false); // For viewing notification modal
     const [isDialogVisible, setIsDialogVisible] = useState(false); // For controlling dialog visibility
     const [dialogMessage, setDialogMessage] = useState(''); // Dialog message
     const [form, setForm] = useState({
-        from: '',
-        subject: '',
-        message: '',
-        date: new Date(),
-        alertConfig: 'day',
-        priority: 'alta',
-        subscription: 'encender',
+        de: '',
+        asunto: '',
+        mensaje: '', // This will be larger with the textarea-style input
+        fecha: new Date(),
+        alertConfig: 'diario',
+        prioridad: 'alta',
+        suscripcion: 'encender',
+        usuarioId: 0, // Add to track selected user when editing
+        usuarioNombre: '', // Add to track selected username when editing
     });
-    const [userRole, setUserRole] = useState(0); // To store user role (will be retrieved from AsyncStorage)
+    const [userRolId, setUserRolId] = useState(0); // To store user role (retrieved from AsyncStorage)
+    const [userId, setUserId] = useState(null); // To store current user's ID from AsyncStorage
 
-    // Fetch notifications by user when component loads
+    // Fetch notifications and users when component loads
     useEffect(() => {
-        const fetchNotifications = async () => {
+        const fetchData = async () => {
             try {
                 // Retrieve the user ID and role from AsyncStorage
-                const userId = await AsyncStorage.getItem('userId');
-                const userRole = await AsyncStorage.getItem('userRolId');
-                setUserRole(parseInt(userRole, 10)); // Set user role
+                const storedUserId = await AsyncStorage.getItem('userId');
+                const storedUserRolId = await AsyncStorage.getItem('userRolId');
+                setUserRolId(parseInt(storedUserRolId, 10)); // Set user role
+                setUserId(storedUserId); // Store current user ID
 
                 // Fetch notifications for the current user
                 request.setConfig({
                     method: 'get',
-                    url: `http://localhost:5075/api/Notificacion/getByUser/${userId}`,
+                    url: `http://localhost:5075/api/Notificacion/getByUser/${storedUserId}`,
                     withCredentials: true,
                 });
-                const response = await request.sendRequest();
+                const notificationResponse = await request.sendRequest();
 
-                if (response.success) {
-                    setNotifications(response.data);
+                if (notificationResponse.success) {
+                    setNotifications(notificationResponse.data);
                 } else {
                     setDialogMessage('Error fetching notifications');
                     setIsDialogVisible(true);
                 }
+
+                // Fetch all users for selection (for admins)
+                if (parseInt(storedUserRolId, 10) === 1) {
+                    request.setConfig({
+                        method: 'get',
+                        url: `http://localhost:5075/api/Notificacion/userDropdown`,
+                        withCredentials: true,
+                    });
+                    const usersResponse = await request.sendRequest();
+
+                    if (usersResponse.success) {
+                        setUsers(usersResponse.data[0].usuarios || []);
+                    } else {
+                        setDialogMessage('Error fetching users');
+                        setIsDialogVisible(true);
+                    }
+                }
             } catch (error) {
-                setDialogMessage('Error fetching notifications');
+                setDialogMessage('Error fetching data');
                 setIsDialogVisible(true);
                 console.error(error);
             }
         };
 
-        fetchNotifications();
+        fetchData();
     }, []);
 
     // Role-based condition for creating, updating, and deleting
-    const canEdit = userRole === 1;
+    const canEdit = userRolId === 1;
 
     const handleSave = async () => {
         try {
-            const userId = await AsyncStorage.getItem('userId');
-            const requestData = { ...form, creadoPor: userId };
+            const username = await AsyncStorage.getItem('user');
+
+            // Convert selected users to the expected format
+            const usuarioIds = selectedUsers.map((userId) => ({
+                usuarioId: userId
+            }));
 
             // If selectedNotification is null, create new notification, otherwise update existing
             if (selectedNotification === null) {
                 // Create new notification
+                const requestData = {
+                    ...form,
+                    creadoPor: username,
+                    usuarioIds // Pass the selected users in the expected format
+                };
+
                 request.setConfig({
                     method: 'post',
                     url: 'http://localhost:5075/api/Notificacion/create',
@@ -88,12 +121,22 @@ export default function Notificaciones() {
 
                 if (response.success) {
                     setDialogMessage('Notificación creada exitosamente.');
-                    setNotifications([...notifications, response.data]);
+                    // Add delay before refreshing
+                    setTimeout(() => {
+                        refreshNotifications(); // Call refresh function after 1 second
+                    }, 1000);
                 } else {
                     setDialogMessage('Error creating notification');
                 }
-            } else {
+            }
+            else {
                 // Update existing notification
+                const requestData = {
+                    ...form,
+                    modificadoPor: username,
+                    usuarioIds // Pass the selected users in the expected format
+                };
+
                 request.setConfig({
                     method: 'put',
                     url: `http://localhost:5075/api/Notificacion/update/${selectedNotification.id}`,
@@ -104,9 +147,10 @@ export default function Notificaciones() {
 
                 if (response.success) {
                     setDialogMessage('Notificación actualizada exitosamente.');
-                    setNotifications(notifications.map((item) =>
-                        item.id === selectedNotification.id ? { ...response.data } : item
-                    ));
+                    // Add delay before refreshing
+                    setTimeout(() => {
+                        refreshNotifications(); // Call refresh function after 1 second
+                    }, 1000);
                 } else {
                     setDialogMessage('Error updating notification');
                 }
@@ -114,12 +158,37 @@ export default function Notificaciones() {
 
             setModalVisible(false); // Close modal after saving
             setIsDialogVisible(true); // Show dialog
-        } catch (error) {
+        }
+        catch (error) {
             setDialogMessage('Error saving notification');
             setIsDialogVisible(true);
             console.error(error);
         }
     };
+
+    const refreshNotifications = async () => {
+        try {
+            // Fetch notifications for the current user
+            request.setConfig({
+                method: 'get',
+                url: `http://localhost:5075/api/Notificacion/getByUser/${userId}`,
+                withCredentials: true,
+            });
+            const notificationResponse = await request.sendRequest();
+
+            if (notificationResponse.success) {
+                setNotifications(notificationResponse.data); // Update notifications state with latest data
+            } else {
+                setDialogMessage('Error fetching notifications');
+                setIsDialogVisible(true);
+            }
+        } catch (error) {
+            setDialogMessage('Error fetching notifications');
+            setIsDialogVisible(true);
+            console.error(error);
+        }
+    };
+
 
     const handleDelete = async (id) => {
         try {
@@ -133,12 +202,14 @@ export default function Notificaciones() {
             if (response.success) {
                 setDialogMessage('Notificación eliminada exitosamente.');
                 setNotifications(notifications.filter((item) => item.id !== id));
-            } else {
+            }
+            else {
                 setDialogMessage('Error deleting notification');
             }
 
             setIsDialogVisible(true);
-        } catch (error) {
+        }
+        catch (error) {
             setDialogMessage('Error deleting notification');
             setIsDialogVisible(true);
             console.error(error);
@@ -148,27 +219,63 @@ export default function Notificaciones() {
     const handleEdit = (item) => {
         setSelectedNotification(item);
         setForm({
-            from: item.from,
-            subject: item.subject,
-            message: item.message,
-            date: item.date,
+            de: item.de,
+            asunto: item.asunto,
+            mensaje: item.mensaje,
+            fecha: item.fecha,
             alertConfig: item.alertConfig,
-            priority: item.priority,
-            subscription: item.subscription,
+            prioridad: item.prioridad,
+            suscripcion: item.suscripcion,
+            usuarioId: item.usuarioId, // Correctly bind the user ID
+            usuarioNombre: item.usuarioNombre, // Bind the user name from the response
         });
+        setSelectedUsers([item.usuarioId]); // Preselect the user based on the notification data
         setModalVisible(true); // Open modal for editing
+    };
+
+    const handleCreate = () => {
+        setSelectedNotification(null); // Reset the form for creating a new notification
+        setForm({
+            de: '',
+            asunto: '',
+            mensaje: '',
+            fecha: new Date(),
+            alertConfig: 'diario',
+            prioridad: 'alta',
+            suscripcion: 'encender',
+            usuarioId: 0, // Reset the user ID
+            usuarioNombre: '', // Reset the username
+        });
+        setSelectedUsers([]); // Reset selected users
+        setModalVisible(true); // Open modal for creating a new notification
+    };
+
+    const toggleUserSelection = (userId) => {
+        if (selectedUsers.includes(userId)) {
+            setSelectedUsers(selectedUsers.filter(id => id !== userId));
+        } else {
+            setSelectedUsers([...selectedUsers, userId]);
+        }
+    };
+
+    const viewFromTable = (item) => {
+        setSelectedNotification(item);
+        setViewMessageModalVisible(true); // Open modal for viewing the full message
     };
 
     const renderNotificationItem = ({ item }) => (
         <View style={styles.notificationItem}>
             <View style={styles.notificationHeader}>
-                <Text style={styles.fromText}>{item.from}</Text>
-                <Text style={styles.dateText}>{item.date}</Text>
+                <Text style={styles.fromText}>{item.de}</Text>
+                <Text style={styles.dateText}>{item.fecha}</Text>
             </View>
-            <Text style={styles.subjectText}>{item.subject}</Text>
-            <Text style={styles.messageText}>{item.message.substring(0, 10)}...</Text>
-             
-            <TouchableOpacity onPress={() => setSelectedNotification(item)} style={styles.viewTableButton}>
+            <Text style={styles.subjectText}>{item.asunto}</Text>
+            <Text style={styles.messageText}>
+                {item.mensaje ? `${item.mensaje.substring(0, 10)}...` : 'Sin mensaje'}
+                {/* Fallback to 'Sin mensaje' if item.mensaje is undefined */}
+            </Text>
+
+            <TouchableOpacity onPress={() => viewFromTable(item)} style={styles.viewTableButton}>
                 <Text style={styles.viewTableButtonText}>Ver mensaje</Text>
             </TouchableOpacity>
 
@@ -191,6 +298,32 @@ export default function Notificaciones() {
                     contentContainerStyle={styles.container}
                 />
 
+                {canEdit && (
+                    <Button title="Crear Nueva Notificación" onPress={handleCreate} />
+                )}
+
+                {/* Modal for viewing full notification */}
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={viewMessageModalVisible}
+                    onRequestClose={() => setViewMessageModalVisible(false)}
+                >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalContent}>
+                            {selectedNotification && (
+                                <>
+                                    <Text style={styles.modalTitle}>De: {selectedNotification.de}</Text>
+                                    <Text style={styles.modalText}>Asunto: {selectedNotification.asunto}</Text>
+                                    <Text style={styles.modalText}>Mensaje: {selectedNotification.mensaje}</Text>
+                                    <Text style={styles.modalText}>Fecha: {selectedNotification.fecha}</Text>
+                                </>
+                            )}
+                            <Button title="Cerrar" onPress={() => setViewMessageModalVisible(false)} />
+                        </View>
+                    </View>
+                </Modal>
+
                 {/* Modal for creating/updating notification */}
                 {canEdit && (
                     <Modal
@@ -204,33 +337,66 @@ export default function Notificaciones() {
                             <TextInput
                                 style={styles.input}
                                 placeholder="De"
-                                value={form.from}
-                                onChangeText={(text) => setForm({ ...form, from: text })}
+                                value={form.de}
+                                onChangeText={(text) => setForm({ ...form, de: text })}
                             />
                             <Text>Asunto:</Text>
                             <TextInput
                                 style={styles.input}
                                 placeholder="Asunto"
-                                value={form.subject}
-                                onChangeText={(text) => setForm({ ...form, subject: text })}
+                                value={form.asunto}
+                                onChangeText={(text) => setForm({ ...form, asunto: text })}
                             />
                             <Text>Mensaje:</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, styles.textArea]}
                                 placeholder="Mensaje"
-                                value={form.message}
-                                onChangeText={(text) => setForm({ ...form, message: text })}
+                                value={form.mensaje}
+                                onChangeText={(text) => setForm({ ...form, mensaje: text })}
+                                multiline={true}
+                                numberOfLines={6}
                             />
                             <Text>Prioridad:</Text>
                             <Picker
-                                selectedValue={form.priority}
-                                onValueChange={(value) => setForm({ ...form, priority: value })}
+                                selectedValue={form.prioridad}
+                                onValueChange={(value) => setForm({ ...form, prioridad: value })}
                                 style={styles.picker}
                             >
                                 <Picker.Item label="Alta" value="alta" />
                                 <Picker.Item label="Media" value="media" />
                                 <Picker.Item label="Baja" value="baja" />
                             </Picker>
+                            <Text>Alertas:</Text>
+                            <Picker
+                                selectedValue={form.alertConfig}
+                                onValueChange={(value) => setForm({ ...form, alertConfig: value })}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Diario" value="diario" />
+                                <Picker.Item label="Semanal" value="semanal" />
+                                <Picker.Item label="Mensual" value="mensual" />
+                            </Picker>
+                            <Text>Suscripción:</Text>
+                            <Picker
+                                selectedValue={form.suscripcion}
+                                onValueChange={(value) => setForm({ ...form, suscripcion: value })}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Apagar" value="apagar" />
+                                <Picker.Item label="Encender" value="encender" />
+                            </Picker>
+
+                            {/* User Selection (For admins) */}
+                            <Text>Seleccionar Usuarios:</Text>
+                            {users.map((user) => (
+                                <View key={user.id} style={styles.checkboxContainer}>
+                                    <Checkbox
+                                        status={selectedUsers.includes(user.id) ? 'checked' : 'unchecked'}
+                                        onPress={() => toggleUserSelection(user.id)}
+                                    />
+                                    <Text>{user.username}</Text>
+                                </View>
+                            ))}
 
                             <Button title={selectedNotification ? 'Actualizar' : 'Guardar'} onPress={handleSave} />
                             <Button title="Cerrar" onPress={() => setModalVisible(false)} color="gray" />
@@ -300,10 +466,31 @@ const styles = StyleSheet.create({
         color: '#fff',
         textAlign: 'center',
     },
-    modalContent: {
+    modalContainer: {
         flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        width: '100%',
         padding: 20,
         backgroundColor: '#fff',
+        borderRadius: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 3,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    modalText: {
+        fontSize: 16,
+        marginBottom: 5,
     },
     input: {
         width: '100%',
@@ -315,6 +502,16 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderRadius: 5,
     },
+    textArea: {
+        width: '100%',
+        height: 100,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        paddingHorizontal: 10,
+        backgroundColor: '#fff',
+        borderRadius: 5,
+        textAlignVertical: 'top', // This aligns text to the top in multiline input
+    },
     picker: {
         height: 40,
         backgroundColor: '#fff',
@@ -322,5 +519,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ccc',
         marginBottom: 10,
+    },
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 5,
     },
 });
