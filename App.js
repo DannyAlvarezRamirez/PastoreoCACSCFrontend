@@ -72,7 +72,7 @@ export default function App() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
             <Stack.Screen name="AppDrawer">
-                {(props) => <AppDrawer {...props} logout={handleLogout} />}
+                {(props) => <AppDrawer {...props} logout={handleLogout} />} 
             </Stack.Screen>
         ) : (
           <>
