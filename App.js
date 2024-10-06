@@ -101,7 +101,7 @@ export default function App() {
                             {(props) => <Login {...props} setIsAuthenticated={setIsAuthenticated} />}
                         </Stack.Screen>
                         <Stack.Screen name="Register" component={Register} />
-                        <Stack.Screen name="RecoverPassword" component={RecoverPassword} />
+                        <Stack.Screen name="RecoverPassword" component={RecoverPassword} /> 
                     </>
                 )}
             </Stack.Navigator>
