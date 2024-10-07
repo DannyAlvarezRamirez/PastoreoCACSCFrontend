@@ -67,7 +67,7 @@ function AppDrawer({ logout }) {
                             <Text style={{ marginLeft: 10 }}>Notificaciones</Text>
                             {notificationCount > 0 && (
                                 <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>{notificationCount}</Text>
+                                    <Text style={styles.badgeText}>{notificationCount}</Text> 
                                 </View>
                             )}
                         </View>
