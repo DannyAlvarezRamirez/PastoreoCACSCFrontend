@@ -17,7 +17,7 @@ import Apartamentos from './screens/Apartamentos'; // Add this screen for apartm
 import Usuarios from './screens/Usuarios'; // Add this screen for users
 import PastoreoRotacion from './screens/PastoreoRotacion'; // Add this screen for rotation of apartments
 import Perfil from './screens/Perfil'; // Add this screen for profile
-import CustomDrawerContent from './components/CustomDrawerContent'; // Import Custom Drawer Content
+import CustomDrawerContent from './components/CustomDrawerContent'; // Import Custom Drawer Content 
 //import { StatusBar } from 'expo-status-bar';
 import { StatusBar } from 'react-native';
 
