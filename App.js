@@ -21,7 +21,7 @@ import PastoreoRotacion from './screens/PastoreoRotacion'; // Add this screen fo
 import Perfil from './screens/Perfil'; // Add this screen for profile
 import CustomDrawerContent from './components/CustomDrawerContent'; // Import Custom Drawer Content
 import { StatusBar } from 'react-native';
-import request from './objects/request'; // Import request object to fetch notifications 
+import request from './objects/request'; // Import request object to fetch notifications
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
