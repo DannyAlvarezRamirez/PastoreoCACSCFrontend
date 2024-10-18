@@ -4,7 +4,7 @@ import { Dialog, Portal, Provider } from 'react-native-paper';  // Import Paper 
 // Import the background image
 import backgroundImage from '../assets/bg2.jpg';
 import userIcon from '../assets/usuario(1)-modified.png'
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token 
 
 // Import the request service
 import request from '.src/objects/request';  // Adjust the path as per your project structure
