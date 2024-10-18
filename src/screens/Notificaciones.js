@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Dialog, Portal, Provider, Checkbox } from 'react-native-paper'; // Added Checkbox for user selection
-import request from '../objects/request';
+import request from './src/objects/request';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // For retrieving user info
 
 export default function Notificaciones() {

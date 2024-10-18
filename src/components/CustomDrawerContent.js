@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
 import { DrawerItemList } from '@react-navigation/drawer';
+import { colors, typography } from '../styles/theme'; // Import theme
 
 export default function CustomDrawerContent(props) {
   return (
@@ -10,7 +11,7 @@ export default function CustomDrawerContent(props) {
       <View style={styles.logoutButtonContainer}>
         <Button
           title="Cerrar Sesión"
-          color="#FF0000"
+          color={colors.secondary1} // Use theme color for the button
           onPress={() => {
             // Call the logout function passed from App.js
             props.logout();

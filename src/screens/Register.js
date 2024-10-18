@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet, ImageBackground, Keyboard } from 'react-native';
-import { Dialog, Portal, Provider, Button as PaperButton } from 'react-native-paper'; // Import Dialog components from react-native-paper
-import request from '../objects/request'; // Import request object for API calls
+import { Dialog, Portal, Provider, Button as PaperButton } from 'react-native-paper';  // Import Paper Dialog components
+import request from '.src/objects/request';
 import backgroundImage from '../assets/bg3.jpg';
 
-export default function RecoverPassword({ navigation }) {
+export default function Register({ navigation }) {
   const [email, setEmail] = useState('');
   const [isDialogVisible, setIsDialogVisible] = useState(false); // State to control dialog visibility
   const [dialogMessage, setDialogMessage] = useState(''); // State for the dialog message
@@ -20,18 +20,19 @@ export default function RecoverPassword({ navigation }) {
   const handleDialogOk = () => {
     setIsDialogVisible(false); // Close the dialog
     if (shouldNavigate) {
-      navigation.navigate('Login'); // Navigate only if the flag is true
+      navigation.navigate('RecoverPassword'); // Navigate only if the flag is true
     }
   };
 
-  // Function to handle password recovery
-  const handleRecoverPassword = async () => {
+  // Function to handle registration
+  const handleRegister = async () => {
     Keyboard.dismiss();  // Hide keyboard when the button is pressed
 
+    // If email is invalid, show the validation dialog and return early
     if (!isValidEmail(email)) {
-      setDialogMessage('El correo debe estar en el formato correcto y pertenecer al dominio @pastoreo.com.');
+      setDialogMessage('El correo electrónico no es válido. Debe tener un máximo de 8 caracteres antes del @, sin espacios, y usar el dominio @pastoreo.com.');
       setIsDialogVisible(true); // Show dialog
-      return; // Stop execution if the email is invalid
+      return; // Stop execution if email is not valid
     }
 
     try {
@@ -39,7 +40,7 @@ export default function RecoverPassword({ navigation }) {
       request.setConfig({
         method: 'post',
         withCredentials: true,
-        url: 'http://localhost:5075/api/Auth/checkEmail', // Update with your actual API endpoint
+        url: 'http://localhost:5075/api/Auth/checkEmail',
         data: { email },
       });
 
@@ -48,15 +49,16 @@ export default function RecoverPassword({ navigation }) {
 
       // Handle the response
       if (response.exitCode === 0) {
-        setDialogMessage('Revisa tu correo para recuperar la contraseña.');
+        // If the email exists and the user is active
+        setDialogMessage(`Su nombre de usuario es ${response.data[0].username}. Redirigiendo a la recuperación de contraseña.`);
         setShouldNavigate(true); // Set navigation flag to true
-        setIsDialogVisible(true); // Show dialog and on OK, navigate back to Login
+        setIsDialogVisible(true); // Show dialog
       } else if (response.exitCode === 2) {
         setDialogMessage('El correo electrónico no existe en el sistema. Por favor, contacte a soporte.');
         setShouldNavigate(false); // Do not navigate
         setIsDialogVisible(true); // Show dialog
       } else if (response.exitCode === 3) {
-        setDialogMessage('El usuario asociado a este correo está inactivo. Contacte a soporte.');
+        setDialogMessage(`El usuario está inactivo. Nombre de usuario: ${response.data[0].username.value}. Contacte a soporte.`);
         setShouldNavigate(false); // Do not navigate
         setIsDialogVisible(true); // Show dialog
       }
@@ -72,15 +74,15 @@ export default function RecoverPassword({ navigation }) {
     <Provider>
       <ImageBackground source={backgroundImage} resizeMode="cover" style={styles.background}>
         <View style={styles.container}>
-          <Text style={styles.title}>Recuperar Contraseña</Text>
+          <Text style={styles.title}>Registrarse</Text>
           <TextInput
             style={styles.input}
-            placeholder="Correo Electrónico"
+            placeholder="Correo electrónico institucional"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
           />
-          <Button title="Recuperar Contraseña" onPress={handleRecoverPassword} />
+          <Button title="Registrar" onPress={handleRegister} />
         </View>
 
         {/* Dialog to display the message */}

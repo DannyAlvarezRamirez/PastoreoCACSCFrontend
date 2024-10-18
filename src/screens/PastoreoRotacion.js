@@ -15,7 +15,7 @@ import {
 import { Picker } from "@react-native-picker/picker"; // For dropdowns
 import DateTimePicker from "@react-native-community/datetimepicker"; // For date pickers
 import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
-import request from "../objects/request";
+import request from "./src/objects/request";
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token and user data
 
 // Helper function to format dates to 'YYYY-MM-DD' for web input fields 

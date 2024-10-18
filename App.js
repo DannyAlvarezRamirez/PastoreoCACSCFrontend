@@ -5,23 +5,24 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/FontAwesome'; // Import the FontAwesome icons
-import Dashboard from './screens/Dashboard';
-import Login from './screens/Login';
-import Register from './screens/Register';
-import RecoverPassword from './screens/RecoverPassword';
-import Registro from './screens/Registro'; // Add this screen for data entry
-import Reportes from './screens/Reportes'; // Add this screen for reports
-import Administracion from './screens/Administracion'; // Add this screen for admin
-import Notificaciones from './screens/Notificaciones'; // Add this screen for notifications
-import Ganado from './screens/Ganado'; // // Add this screen for livestock
-import Suministros from './screens/Suministros'; // Add this screen for suppliers
-import Apartamentos from './screens/Apartamentos'; // Add this screen for apartments
-import Usuarios from './screens/Usuarios'; // Add this screen for users
-import PastoreoRotacion from './screens/PastoreoRotacion'; // Add this screen for rotation of apartments
-import Perfil from './screens/Perfil'; // Add this screen for profile
-import CustomDrawerContent from './components/CustomDrawerContent'; // Import Custom Drawer Content
+import Dashboard from './src/screens/Dashboard';
+import Login from './src/screens/Login';
+import Register from './src/screens/Register';
+import RecoverPassword from './src/screens/RecoverPassword';
+import Registro from './src/screens/Registro'; // Add this screen for data entry
+import Reportes from './src/screens/Reportes'; // Add this screen for reports
+import Administracion from './src/screens/Administracion'; // Add this screen for admin
+import Notificaciones from './src/screens/Notificaciones'; // Add this screen for notifications
+import Ganado from './src/screens/Ganado'; // // Add this screen for livestock
+import Suministros from './src/screens/Suministros'; // Add this screen for suppliers
+import Apartamentos from './src/screens/Apartamentos'; // Add this screen for apartments
+import Usuarios from './src/screens/Usuarios'; // Add this screen for users
+import PastoreoRotacion from './src/screens/PastoreoRotacion'; // Add this screen for rotation of apartments
+import Perfil from './src/screens/Perfil'; // Add this screen for profile
+import CustomDrawerContent from './src/components/CustomDrawerContent'; // Import Custom Drawer Content
 import { StatusBar } from 'react-native';
-import request from './objects/request'; // Import request object to fetch notifications
+import request from './src/objects/request'; // Import request object to fetch notifications
+import { colors, typography, commonStyles } from './src/styles/theme'; // Import theme
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -90,9 +91,9 @@ function AppDrawer({ logout }) {
                 component={Notificaciones}
                 options={{
                     drawerLabel: () => (
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Icon name="bell" size={20} color="black" />
-                            <Text style={{ marginLeft: 10 }}>Notificaciones</Text>
+                        <View style={styles.drawerLabelContainer}>
+                            <Icon name="bell" size={20} color={colors.secondary3} />
+                            <Text style={[styles.drawerLabelText, typography.main]}>Notificaciones</Text>
                             {notificationCount > 0 && (
                                 <View style={styles.badge}>
                                     <Text style={styles.badgeText}>{notificationCount}</Text> 
@@ -117,7 +118,7 @@ export default function App() {
 
     return (
         <NavigationContainer>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+            <StatusBar barStyle="dark-content" backgroundColor={colors.main1} />
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {isAuthenticated ? (
                     <Stack.Screen name="AppDrawer">
@@ -140,7 +141,7 @@ export default function App() {
 // Styles for the badge
 const styles = {
     badge: {
-        backgroundColor: 'red',
+        backgroundColor: colors.secondary4, // Use theme color
         borderRadius: 10,
         width: 20,
         height: 20,
@@ -152,5 +153,13 @@ const styles = {
         color: 'white',
         fontSize: 12,
         fontWeight: 'bold',
+    },
+    drawerLabelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    drawerLabelText: {
+        marginLeft: 10,
+        fontSize: 16,
     },
 };

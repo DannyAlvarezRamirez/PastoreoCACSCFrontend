@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, ScrollView, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
-import request from "../objects/request";
+import request from "./src/objects/request";
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token and user data
 
 export default function Suministros() {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, View, Text, TextInput, Button, StyleSheet, FlatList, ScrollView, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
 import { Picker } from "@react-native-picker/picker"; // For dropdowns
 import { Dialog, Portal, Provider } from "react-native-paper"; // Import Paper Dialog components
-import request from "../objects/request";
+import request from "./src/objects/request";
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token and user data
 
 // Function to validate the email format

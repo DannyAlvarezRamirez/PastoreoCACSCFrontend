@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, ActivityIndicator } from 'react-native';
 import { Dialog, Portal, Provider, Button as PaperButton } from 'react-native-paper'; // Import Dialog components
-import request from '../objects/request'; // Import the request object for API calls
+import request from '../src/objects/request'; // Import the request object for API calls
 import backgroundImage from '../assets/bg2.jpg';
 
 export default function Dashboard({ navigation }) {

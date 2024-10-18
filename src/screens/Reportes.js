@@ -3,7 +3,7 @@ import { SafeAreaView, View, Text, Button, StyleSheet, ScrollView, TouchableOpac
 import { Picker } from '@react-native-picker/picker';
 import { Dialog, Portal, Provider } from 'react-native-paper'; // Add if missing
 import DateTimePicker from '@react-native-community/datetimepicker'; // For date pickers
-import request from '../objects/request'; // Ensure the request object is imported correctly
+import request from '../src/objects/request'; // Ensure the request object is imported correctly
 
 // Conditionally import the charting library based on the platform
 const { VictoryPie, VictoryBar, VictoryLine } = Platform.OS === 'web' ? require('victory') : require('victory-native');

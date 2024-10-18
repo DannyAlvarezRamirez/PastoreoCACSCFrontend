@@ -7,7 +7,7 @@ import userIcon from '../assets/usuario(1)-modified.png'
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import for storing the token
 
 // Import the request service
-import request from '../objects/request';  // Adjust the path as per your project structure
+import request from '.src/objects/request';  // Adjust the path as per your project structure
 
 export default function Login({ navigation, setIsAuthenticated  }) {
   const [username, setUsername] = useState('');
